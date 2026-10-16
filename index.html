@@ -895,6 +895,17 @@ function geoRows(rows){
       lat:g.lat??null,lng:g.lng??null,precisao:pf?'—':g.precisao||'',situacao:g.situacao||'',notas:c.nfs.size,total:c.total,ult:c.ult,
       status:st,fonte:[g.fonte,g.geoFonte].filter(Boolean).join(' + '),ts:g.ts?new Date(g.ts):null,map}});
 }
+// uma linha por remessa (NF-e), em ordem cronológica, com o endereço do cliente titular
+function geoNfRows(rows){
+  const cli=new Map(geoRows(rows).map(c=>[dig(c.cnpj),c])),m=new Map();
+  for(const r of rows){if(!isNFe0(r))continue;let g=m.get(r.nfk);
+    if(!g)m.set(r.nfk,g={data:r.data,nf:r.nf,emp:r.emp,d:dig(r.cnpj),utils:new Set(),prods:[],itens:0,qtd:0,totProd:0,desc:0,frete:0,total:0});
+    if(r.data<g.data)g.data=r.data;g.utils.add(r.util);if(!g.prods.includes(r.produto))g.prods.push(r.produto);
+    g.itens++;g.qtd+=r.qtd;g.totProd+=r.totProd;g.desc+=r.desc;g.frete+=r.frete;g.total+=r.total}
+  return [...m.values()].sort((a,b)=>a.data-b.data||String(a.nf).localeCompare(String(b.nf),'pt',{numeric:true}))
+    .map(g=>{const c=cli.get(g.d)||{};return {...c,data:g.data,nf:g.nf,emp:g.emp,util:[...g.utils].join(', '),
+      produtos:g.prods.slice(0,3).join('; ')+(g.prods.length>3?` (+${g.prods.length-3})`:''),itens:g.itens,qtd:g.qtd,totProd:g.totProd,desc:g.desc,frete:g.frete,valor:g.total}});
+}
 const PAL=['--teal','--navy-2','--amber','--rose','--violet','--green','--teal-2','--muted','--rose','--violet'].map(k=>getComputedStyle(document.documentElement).getPropertyValue(k).trim());
 function chart(id,type,data,o={}){
   Chart.defaults.color=getComputedStyle(document.documentElement).getPropertyValue('--muted').trim();Chart.defaults.borderColor=getComputedStyle(document.documentElement).getPropertyValue('--line').trim();
@@ -1091,13 +1102,14 @@ async function exportXlsx(){
   dataSheet(wb,'Empresas','Resumo por empresa — períodos e totais (obedece aos filtros)',[{h:'Empresa',k:'emp',w:14},{h:'CNPJ',k:'cnpj',w:20},{h:'Razão social',k:'nome',w:44},{h:'Período das movimentações',k:'pm',w:24},{h:'Período do relatório',k:'pr',w:24},{h:'Emitido em',k:'emit',w:17},
     {h:'Notas',k:'notas',fmt:'#,##0',w:9},{h:'Clientes',k:'cli',fmt:'#,##0',w:9},{h:'Itens',k:'itens',fmt:'#,##0',w:9},{h:'Faturamento líquido',k:'fat',fmt:MONEY,w:18},{h:'Fora do faturamento',k:'fora',fmt:MONEY,w:18},{h:'Total geral das notas',k:'tot',fmt:MONEY,w:18},{h:'% do faturamento',k:'pf',fmt:'0.0%',w:11},{h:'Intragrupo',k:'inter',fmt:MONEY,w:15}],er,{totals:['notas','itens','fat','fora','tot','inter']});
   // Clientes titulares de NF-e (recibos excluídos) com endereço da Receita Federal e coordenadas
-  const gr=geoRows(VIEW);
-  dataSheet(wb,'Clientes (NF-e)','Clientes titulares de notas fiscais (NF-e, sem recibos) — endereço (Receita Federal) e coordenadas (OpenStreetMap)',[
-    {h:'#',v:(r,i)=>i-5,w:5},{h:'Empresa(s) emissora(s)',k:'emps',w:16},{h:'CNPJ/CPF',k:'cnpj',w:20},{h:'Razão social (Receita)',k:'razao',w:42},{h:'Nome fantasia',k:'fantasia',w:26},{h:'Cliente (relatório)',k:'cliente',w:40},
-    {h:'Logradouro',k:'logradouro',w:34},{h:'Número',k:'numero',w:9},{h:'Complemento',k:'complemento',w:22},{h:'Bairro',k:'bairro',w:20},{h:'CEP',k:'cep',w:11},{h:'Cidade',k:'cidade',w:20},{h:'UF',k:'uf',w:5},
+  const gr=geoRows(VIEW),gn=geoNfRows(VIEW);
+  dataSheet(wb,'Clientes (NF-e)','Remessas em NF-e (sem recibos) por data — cliente titular, endereço (Receita Federal) e coordenadas (OpenStreetMap)',[
+    {h:'#',v:(r,i)=>i-5,w:5},{h:'Data da remessa',k:'data',fmt:'dd/mm/yyyy hh:mm',w:16},{h:'NF-e',k:'nf',w:9},{h:'Empresa emissora',k:'emp',w:12},{h:'Utilização',k:'util',w:20},
+    {h:'Itens',k:'itens',fmt:'#,##0',w:7},{h:'Quantidade',k:'qtd',fmt:'#,##0.##',w:10},{h:'Produtos (resumo)',k:'produtos',w:50},{h:'Frete',k:'frete',fmt:MONEY,w:12},{h:'Valor da NF-e',k:'valor',fmt:MONEY,w:15},
+    {h:'CNPJ/CPF',k:'cnpj',w:20},{h:'Razão social (Receita)',k:'razao',w:40},{h:'Nome fantasia',k:'fantasia',w:24},{h:'Cliente (relatório)',k:'cliente',w:40},
+    {h:'Logradouro',k:'logradouro',w:32},{h:'Número',k:'numero',w:9},{h:'Complemento',k:'complemento',w:20},{h:'Bairro',k:'bairro',w:20},{h:'CEP',k:'cep',w:11},{h:'Cidade',k:'cidade',w:20},{h:'UF',k:'uf',w:5},
     {h:'Endereço completo',k:'endereco',w:60},{h:'Latitude',k:'lat',fmt:'0.000000',w:12},{h:'Longitude',k:'lng',fmt:'0.000000',w:12},{h:'Precisão',k:'precisao',w:11},
-    {h:'Mapa',v:r=>r.map?{text:'Abrir no mapa',hyperlink:r.map}:'',w:14},{h:'Situação cadastral',k:'situacao',w:14},{h:'Notas (NF-e)',k:'notas',fmt:'#,##0',w:11},{h:'Valor em NF-e',k:'total',fmt:MONEY,w:16},
-    {h:'Última NF-e',k:'ult',fmt:'dd/mm/yyyy',w:12},{h:'Status da consulta',k:'status',w:34},{h:'Fonte',k:'fonte',w:40},{h:'Consultado em',k:'ts',fmt:'dd/mm/yyyy hh:mm',w:16}],gr,{totals:['notas','total']});
+    {h:'Mapa',v:r=>r.map?{text:'Abrir no mapa',hyperlink:r.map}:'',w:14},{h:'Situação cadastral',k:'situacao',w:14},{h:'Status da consulta',k:'status',w:34},{h:'Fonte',k:'fonte',w:40},{h:'Consultado em',k:'ts',fmt:'dd/mm/yyyy hh:mm',w:16}],gn,{totals:['itens','qtd','frete','valor']});
   const pend=gr.filter(r=>r.status==='Consulta pendente').length;
   if(geoState.running||pend)toast(`Aba “Clientes (NF-e)”: ${pend} cliente(s) ainda sem consulta de endereço — gere o Excel novamente ao final da consulta`);
   // Conciliação: grupo + colunas por empresa
