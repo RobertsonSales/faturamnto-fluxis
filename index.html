@@ -40,6 +40,7 @@
 
   <section id="dash" class="hidden">
     <div class="meta" id="meta"></div>
+    <div class="geo-status" id="geoStatus" role="status" aria-live="polite" hidden></div>
 
     <div class="filters">
       <div><label id="labelEmp">Empresa</label><div id="fEmp" class="multi" aria-labelledby="labelEmp"></div></div>
@@ -143,6 +144,11 @@ tr.br-row td{background:rgba(245,158,11,.09)}
 .cls-act a{color:var(--teal);font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap}.cls-act a:hover{text-decoration:underline}
 .cls-empty{text-align:center;color:var(--muted);padding:20px!important}
 .line-tag.inf{background:color-mix(in srgb,var(--amber) 18%,transparent);color:color-mix(in srgb,var(--amber) 70%,var(--ink))}
+.geo-status{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin:-8px 0 18px}.geo-status[hidden]{display:none}.geo-status b{color:var(--ink)}
+.geo-dot{width:8px;height:8px;border-radius:50%;background:var(--green)}.geo-dot.run{background:var(--amber);animation:geoP 1s infinite alternate}.geo-dot.warn{background:var(--rose)}
+@keyframes geoP{to{opacity:.3}}
+.geo-bar{display:inline-block;width:140px;height:5px;border-radius:4px;background:var(--line);overflow:hidden}.geo-bar i{display:block;height:100%;background:var(--teal);transition:width .3s}
+.geo-status button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;padding:3px 9px;font-size:11px;font-weight:600}
 </style>
 
 <script>
@@ -495,7 +501,7 @@ async function load(files){
     rows.forEach(r=>{const cr=cnpjRoot(r.cnpj);r.inter=!!cr&&roots.has(cr)&&cr!==cnpjRoot(r.empCnpj)});
     ALL=classifyRows(rows);META.arquivo=[...new Set(files.map(f=>f.name))].join(', ');
     setupFilters();$('empty').classList.add('hidden');$('dash').classList.remove('hidden');$('btnExport').disabled=false;$('btnPdf').disabled=false;
-    apply();
+    apply();geoStart();
     toast(`${rows.length} itens importados · `+EMPS.map(e=>`${e.emp}: ${NUM.format(rows.filter(r=>r.emp===e.emp).length)}`).join(' · ')+(dup?` · ${dup} duplicados ignorados`:''));
   }catch(err){console.error(err);toast('Erro: '+err.message)}
 }
@@ -804,6 +810,91 @@ function reclassify(){
     try{const j=JSON.parse(await f.text()),aj=j.ajustes||j;let n=0;for(const k in aj){if(typeof aj[k]==='string'&&aj[k]){USER_CLASS[norm(k).replace(/\s+/g,' ').trim()]=aj[k];n++}}saveUserClass();reclassify();toast(`${n} ajuste(s) de classificação importados`)}catch(err){toast('Arquivo de cadastro inválido')}};
   $('clsReset').onclick=()=>{const n=Object.keys(USER_CLASS).length;if(!n)return toast('Não há ajustes salvos');if(!confirm(`Remover os ${n} ajuste(s) de classificação salvos neste navegador?`))return;USER_CLASS={};saveUserClass();reclassify();toast('Ajustes removidos — classificação automática restaurada')};
 })();
+/* ---------- Endereços e geolocalização dos clientes titulares de NF-e ---------- */
+// 1) endereço oficial pelo CNPJ (BrasilAPI → CNPJ.ws como reserva); 2) lat/long pelo OpenStreetMap (Nominatim, 1 consulta/s).
+// Resultados ficam em cache no navegador; nas próximas importações só CNPJs novos (ou vencidos) são consultados.
+const GEO_KEY='labmedic-clientes-geo-v1',GEO_TTL=180*864e5,GEO_RETRY=864e5;
+let GEO={};try{GEO=JSON.parse(localStorage.getItem(GEO_KEY)||'{}')||{}}catch(e){GEO={}}
+const saveGeo=()=>{try{localStorage.setItem(GEO_KEY,JSON.stringify(GEO))}catch(e){}};
+const dig=v=>String(v||'').replace(/\D/g,'');
+const fmtCep=c=>c&&c.length===8?c.slice(0,5)+'-'+c.slice(5):(c||'');
+let geoRunId=0;const geoState={total:0,done:0,fail:0,running:false};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function fetchJSON(url,ms=15000){const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);
+  try{const r=await fetch(url,{signal:c.signal,headers:{Accept:'application/json'}});if(!r.ok){const e=new Error('HTTP '+r.status);e.status=r.status;throw e}return await r.json()}finally{clearTimeout(t)}}
+function nfeClients(rows){
+  const m=new Map();
+  for(const r of rows){if(!isNFe0(r))continue;const d=dig(r.cnpj);let c=m.get(d);
+    if(!c)m.set(d,c={d,cnpj:r.cnpj,cliente:r.cliente,uf:r.uf,cidade:r.cidade,emps:new Set(),nfs:new Set(),total:0,ult:r.data});
+    c.emps.add(r.emp);c.nfs.add(r.nfk);c.total+=r.total;if(r.data>c.ult)c.ult=r.data}
+  return [...m.values()].sort((a,b)=>b.total-a.total);
+}
+async function cnpjLookup(d){
+  try{const j=await fetchJSON('https://brasilapi.com.br/api/cnpj/v1/'+d);
+    return {razao:j.razao_social||'',fantasia:j.nome_fantasia||'',tipoLog:j.descricao_tipo_de_logradouro||'',logradouro:j.logradouro||'',numero:j.numero||'',complemento:j.complemento||'',bairro:j.bairro||'',cep:dig(j.cep),cidade:j.municipio||'',uf:j.uf||'',situacao:j.descricao_situacao_cadastral||'',fonte:'BrasilAPI (Receita Federal)'}}
+  catch(e){
+    if(e.status===404||e.status===400)return {erro:'CNPJ não localizado na Receita Federal'};
+    await sleep(1500);
+    const j=await fetchJSON('https://publica.cnpj.ws/cnpj/'+d),s=j.estabelecimento||{};
+    return {razao:j.razao_social||'',fantasia:s.nome_fantasia||'',tipoLog:s.tipo_logradouro||'',logradouro:s.logradouro||'',numero:s.numero||'',complemento:s.complemento||'',bairro:s.bairro||'',cep:dig(s.cep),cidade:s.cidade?.nome||'',uf:s.estado?.sigla||'',situacao:s.situacao_cadastral||'',fonte:'CNPJ.ws (Receita Federal)'}}
+}
+let lastOSM=0;
+async function osm(params){
+  const wait=1100-(Date.now()-lastOSM);if(wait>0)await sleep(wait);lastOSM=Date.now();
+  const q=new URLSearchParams({format:'jsonv2',limit:'1',addressdetails:'1',countrycodes:'br','accept-language':'pt-BR',...params});
+  const a=await fetchJSON('https://nominatim.openstreetmap.org/search?'+q.toString());return a&&a[0];
+}
+async function geocode(a){
+  const num=/^\d+/.test(String(a.numero||'').trim())?String(a.numero).trim().match(/^\d+/)[0]:'';
+  const rua=[a.tipoLog,a.logradouro].filter(Boolean).join(' ').trim();
+  const tries=[];
+  if(rua&&a.cidade)tries.push([{street:(num?num+' ':'')+rua,city:a.cidade,state:a.uf,country:'Brasil'},num?'Número':'Rua']);
+  if(rua&&a.cidade&&num)tries.push([{street:rua,city:a.cidade,state:a.uf,country:'Brasil'},'Rua']);
+  if(a.cep)tries.push([{postalcode:fmtCep(a.cep),country:'Brasil'},'CEP']);
+  if(a.cidade)tries.push([{city:a.cidade,state:a.uf,country:'Brasil'},'Cidade']);
+  for(const [p,prec] of tries){const r=await osm(p);
+    if(r&&r.lat){const exato=prec==='Número'&&!(r.address&&r.address.house_number)?'Rua':prec;return {lat:+r.lat,lng:+r.lon,precisao:exato,geoFonte:'OpenStreetMap (Nominatim)'}}}
+  return {lat:null,lng:null,precisao:'Não localizado',geoFonte:'OpenStreetMap (Nominatim)'};
+}
+function geoStatus(){
+  const el=$('geoStatus');if(!el)return;const s=geoState;
+  if(!s.total){el.hidden=true;return}el.hidden=false;
+  const ok=s.total-s.fail;
+  el.innerHTML=s.running?`<span class="geo-dot run"></span>Consultando endereços e coordenadas dos clientes (NF-e): <b>${s.done} de ${s.total}</b>…<span class="geo-bar"><i style="width:${(s.done/(s.total||1)*100).toFixed(0)}%"></i></span>`
+    :`<span class="geo-dot ${s.fail?'warn':'ok'}"></span>Endereços dos clientes (NF-e): <b>${ok} de ${s.total}</b> prontos para a aba “Clientes (NF-e)” do Excel${s.fail?` · ${s.fail} sem retorno <button type="button" id="geoRetry">Tentar novamente</button>`:''}`;
+  const b=$('geoRetry');if(b)b.onclick=()=>geoStart(true);
+}
+async function geoStart(retry){
+  const id=++geoRunId,list=nfeClients(ALL),now=Date.now();
+  const need=c=>{if(dig(c.d).length!==14)return false;const g=GEO[c.d];if(!g)return true;if(g.erro||g.precisao==='Não localizado'||g.lat==null)return retry||now-g.ts>GEO_RETRY;return now-g.ts>GEO_TTL};
+  const todo=list.filter(need);
+  Object.assign(geoState,{total:list.length,done:list.length-todo.length,fail:0,running:todo.length>0});geoStatus();
+  for(const c of todo){
+    if(id!==geoRunId)return; // nova importação cancelou esta rodada
+    try{const a=await cnpjLookup(c.d);let g={...a,ts:Date.now()};
+      if(!a.erro){Object.assign(g,await geocode(a))}
+      GEO[c.d]=g;saveGeo()}
+    catch(e){GEO[c.d]={...(GEO[c.d]||{}),erro:'Serviço indisponível ('+(e.status||e.name||'rede')+')',ts:Date.now()};saveGeo()}
+    if(id!==geoRunId)return;
+    geoState.done++;geoStatus();
+    await sleep(350);
+  }
+  geoState.running=false;
+  geoState.fail=list.filter(c=>dig(c.d).length===14&&(!GEO[c.d]||GEO[c.d].erro||GEO[c.d].lat==null)).length;
+  geoStatus();
+}
+// linhas da aba "Clientes (NF-e)" — obedece aos filtros (recibos excluídos)
+function geoRows(rows){
+  return nfeClients(rows).map(c=>{const g=GEO[c.d]||{},pf=c.d.length===11;
+    const st=pf?'Pessoa física — endereço não consultado':g.erro?g.erro:!g.ts?'Consulta pendente':g.lat==null?'Endereço localizado; coordenadas não encontradas':'Ok';
+    const map=g.lat!=null?`https://www.google.com/maps/search/?api=1&query=${g.lat},${g.lng}`:'';
+    return {emps:[...c.emps].join(', '),cnpj:c.cnpj,razao:g.razao||'',fantasia:g.fantasia||'',cliente:c.cliente,
+      logradouro:[g.tipoLog,g.logradouro].filter(Boolean).join(' '),numero:g.numero||'',complemento:g.complemento||'',bairro:g.bairro||'',cep:fmtCep(g.cep),
+      cidade:g.cidade||c.cidade,uf:g.uf||c.uf,
+      endereco:g.logradouro?`${[g.tipoLog,g.logradouro].filter(Boolean).join(' ')}, ${g.numero||'s/n'}${g.complemento?' - '+g.complemento:''} - ${g.bairro||''}, ${g.cidade||c.cidade}/${g.uf||c.uf}${g.cep?', CEP '+fmtCep(g.cep):''}`:'',
+      lat:g.lat??null,lng:g.lng??null,precisao:pf?'—':g.precisao||'',situacao:g.situacao||'',notas:c.nfs.size,total:c.total,ult:c.ult,
+      status:st,fonte:[g.fonte,g.geoFonte].filter(Boolean).join(' + '),ts:g.ts?new Date(g.ts):null,map}});
+}
 const PAL=['--teal','--navy-2','--amber','--rose','--violet','--green','--teal-2','--muted','--rose','--violet'].map(k=>getComputedStyle(document.documentElement).getPropertyValue(k).trim());
 function chart(id,type,data,o={}){
   Chart.defaults.color=getComputedStyle(document.documentElement).getPropertyValue('--muted').trim();Chart.defaults.borderColor=getComputedStyle(document.documentElement).getPropertyValue('--line').trim();
@@ -999,6 +1090,16 @@ async function exportXlsx(){
     return {emp:e.emp,cnpj:e.cnpj,nome:e.nome,pm:perMov(R),pr:perRel(e),emit:(e.emitido||'').replace('Emitido em: ',''),notas:t.notas,cli:t.clientes,itens:R.length,fat:f,fora:foraOf(cc),tot:cc.tot,pf:gF?f/gF:0,inter:sumBy(R.filter(r=>r.inter),'total')}});
   dataSheet(wb,'Empresas','Resumo por empresa — períodos e totais (obedece aos filtros)',[{h:'Empresa',k:'emp',w:14},{h:'CNPJ',k:'cnpj',w:20},{h:'Razão social',k:'nome',w:44},{h:'Período das movimentações',k:'pm',w:24},{h:'Período do relatório',k:'pr',w:24},{h:'Emitido em',k:'emit',w:17},
     {h:'Notas',k:'notas',fmt:'#,##0',w:9},{h:'Clientes',k:'cli',fmt:'#,##0',w:9},{h:'Itens',k:'itens',fmt:'#,##0',w:9},{h:'Faturamento líquido',k:'fat',fmt:MONEY,w:18},{h:'Fora do faturamento',k:'fora',fmt:MONEY,w:18},{h:'Total geral das notas',k:'tot',fmt:MONEY,w:18},{h:'% do faturamento',k:'pf',fmt:'0.0%',w:11},{h:'Intragrupo',k:'inter',fmt:MONEY,w:15}],er,{totals:['notas','itens','fat','fora','tot','inter']});
+  // Clientes titulares de NF-e (recibos excluídos) com endereço da Receita Federal e coordenadas
+  const gr=geoRows(VIEW);
+  dataSheet(wb,'Clientes (NF-e)','Clientes titulares de notas fiscais (NF-e, sem recibos) — endereço (Receita Federal) e coordenadas (OpenStreetMap)',[
+    {h:'#',v:(r,i)=>i-5,w:5},{h:'Empresa(s) emissora(s)',k:'emps',w:16},{h:'CNPJ/CPF',k:'cnpj',w:20},{h:'Razão social (Receita)',k:'razao',w:42},{h:'Nome fantasia',k:'fantasia',w:26},{h:'Cliente (relatório)',k:'cliente',w:40},
+    {h:'Logradouro',k:'logradouro',w:34},{h:'Número',k:'numero',w:9},{h:'Complemento',k:'complemento',w:22},{h:'Bairro',k:'bairro',w:20},{h:'CEP',k:'cep',w:11},{h:'Cidade',k:'cidade',w:20},{h:'UF',k:'uf',w:5},
+    {h:'Endereço completo',k:'endereco',w:60},{h:'Latitude',k:'lat',fmt:'0.000000',w:12},{h:'Longitude',k:'lng',fmt:'0.000000',w:12},{h:'Precisão',k:'precisao',w:11},
+    {h:'Mapa',v:r=>r.map?{text:'Abrir no mapa',hyperlink:r.map}:'',w:14},{h:'Situação cadastral',k:'situacao',w:14},{h:'Notas (NF-e)',k:'notas',fmt:'#,##0',w:11},{h:'Valor em NF-e',k:'total',fmt:MONEY,w:16},
+    {h:'Última NF-e',k:'ult',fmt:'dd/mm/yyyy',w:12},{h:'Status da consulta',k:'status',w:34},{h:'Fonte',k:'fonte',w:40},{h:'Consultado em',k:'ts',fmt:'dd/mm/yyyy hh:mm',w:16}],gr,{totals:['notas','total']});
+  const pend=gr.filter(r=>r.status==='Consulta pendente').length;
+  if(geoState.running||pend)toast(`Aba “Clientes (NF-e)”: ${pend} cliente(s) ainda sem consulta de endereço — gere o Excel novamente ao final da consulta`);
   // Conciliação: grupo + colunas por empresa
   const ccG=concil(VIEW),ccE=EL.map(e=>concil(byEmp(VIEW,e.emp)));
   const ccRows=ccG.lines.map(x=>{const o={...x};ccE.forEach((c,i)=>o['e'+i]=(c.lines.find(y=>y.k===x.k)||{total:0}).total);return o});
