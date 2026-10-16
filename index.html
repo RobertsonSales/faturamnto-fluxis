@@ -6,7 +6,7 @@
 <title>Grupo Labmedic · Dashboard de Faturamento</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <style>:root{color-scheme:light;--navy:oklch(.27 .06 245);--navy-2:oklch(.39 .07 240);--teal:oklch(.56 .1 183);--teal-2:oklch(.75 .12 179);--teal-soft:oklch(.95 .025 180);--bg:oklch(.975 .004 235);--card:oklch(1 0 0);--ink:oklch(.25 .035 245);--muted:oklch(.56 .025 245);--line:oklch(.91 .012 235);--amber:oklch(.76 .14 70);--rose:oklch(.63 .17 15);--violet:oklch(.59 .13 260);--green:oklch(.65 .14 155);--header:oklch(1 0 0);--input-bg:oklch(.99 .002 240);--stripe:oklch(.98 .004 235);--hero-ink:oklch(1 0 0);--hero-muted:oklch(.9 .018 180);--hero-overlay:oklch(.22 .045 190 / .24);--shadow:0 2px 12px oklch(.25 .03 245 / .04);--radius:8px;--font:"Plus Jakarta Sans",system-ui,sans-serif}
@@ -14,35 +14,15 @@
 *{box-sizing:border-box;margin:0;padding:0;letter-spacing:0}body{font-family:var(--font);background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5}.mono{font-family:"JetBrains Mono",monospace}button,input,select{font:inherit}button{cursor:pointer}button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible,.tbl-wrap:focus-visible{outline:2px solid var(--teal);outline-offset:3px}header{background:var(--header);padding:20px 36px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}.logo{width:44px;height:44px;border-radius:8px;background:var(--teal);color:var(--hero-ink);display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800;line-height:1}.logo span{font-size:19px;align-self:flex-start;margin-top:5px}.brand h1{font-size:19px;font-weight:800}.brand p{font-size:11px;color:var(--muted);margin-top:2px}.spacer{flex:1}.local-status{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:11px;margin-right:12px}.local-status i{width:6px;height:6px;border-radius:50%;background:var(--green)}.btn{border:1px solid var(--line);font-weight:600;padding:10px 15px;border-radius:6px;display:inline-flex;gap:8px;align-items:center;transition:background .15s;background:var(--card);color:var(--ink);white-space:nowrap}.btn span{font-size:18px;line-height:1}.btn-primary{background:var(--teal);color:var(--hero-ink);border-color:var(--teal)}.btn-ghost:hover,.btn-theme:hover{background:var(--teal-soft)}.btn-theme{width:38px;height:38px;padding:0;justify-content:center;font-size:21px}.btn:disabled{opacity:.35;cursor:not-allowed}main{padding:40px 36px 30px;max-width:1500px;margin:auto}.home-heading{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:28px;gap:20px}.eyebrow{font-size:10px;font-weight:700;letter-spacing:0;color:var(--teal)}.home-heading h2{font-size:29px;font-weight:700;margin:9px 0 6px}.home-heading p{color:var(--muted);font-size:13px}.home-badge{font-size:9px;letter-spacing:0;color:var(--muted);padding-bottom:4px;white-space:nowrap}.home-badge span{padding:0 10px;color:var(--teal)}.carousel{height:clamp(330px,48vh,500px);position:relative;overflow:hidden;border-radius:8px;background:var(--navy)}.slide{position:absolute;inset:0;opacity:0;transition:opacity .7s;pointer-events:none}.slide.active{opacity:1}.slide img{width:100%;height:100%;object-fit:cover;object-position:center}.slide:after{content:"";position:absolute;inset:0;background:var(--hero-overlay)}.slide-copy{position:absolute;left:5%;top:22%;z-index:2;color:var(--hero-ink)}.slide-copy .eyebrow{color:var(--hero-muted);font-size:10px}.slide-copy h2{font-size:46px;font-weight:800;line-height:1.2;margin:17px 0}.slide-copy p{font-size:16px;line-height:1.8;color:var(--hero-muted)}.slide-category{display:block;margin-top:37px;font-size:10px;letter-spacing:0;color:var(--hero-muted)}.carousel-controls{position:absolute;bottom:25px;left:5%;right:3%;z-index:3;display:flex;justify-content:space-between;align-items:center}.dots{display:flex;gap:8px}.dot{width:7px;height:7px;border:none;border-radius:50%;background:var(--hero-muted);opacity:.45}.dot.active{width:28px;border-radius:4px;opacity:1}.carousel-controls>div:last-child{display:flex;gap:8px}.carousel-arrow{height:34px;width:34px;border:1px solid var(--hero-muted);background:var(--hero-overlay);color:var(--hero-ink);border-radius:50%;font-size:16px}.carousel-arrow:hover{background:var(--teal)}.home-bottom{display:flex;align-items:center;justify-content:space-between;padding:27px 0 30px;border-bottom:1px solid var(--line);gap:20px}.home-note{display:flex;gap:15px;align-items:center}.note-icon{font-size:25px;color:var(--teal);width:42px;height:42px;display:grid;place-items:center;border:1px solid var(--line);border-radius:8px}.home-note h3{font-size:13px;font-weight:700}.home-note p{font-size:11px;color:var(--muted);margin-top:5px}.secure-note{font-size:10px;color:var(--muted)}.meta{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}.chip{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:6px 12px;font-size:11px;color:var(--muted)}.chip b{color:var(--ink)}.filters{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-bottom:24px;padding-bottom:24px;border-bottom:1px solid var(--line)}.filters>div{min-width:0}.filters>div>label{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:7px}.filters input:not([type=checkbox]),.filters select,.multi summary{width:100%;height:39px;padding:9px 11px;border:1px solid var(--line);border-radius:6px;background:var(--input-bg);color:var(--ink);font-size:12px}.multi{position:relative}.multi summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between}.multi summary:after{content:'⌄'}.multi-menu{position:absolute;top:45px;left:0;min-width:230px;width:100%;max-height:280px;overflow:auto;z-index:15;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:7px;box-shadow:var(--shadow)}.multi-menu label{display:flex;gap:9px;align-items:center;padding:9px;cursor:pointer;font-size:12px;overflow-wrap:anywhere}.multi-menu label:first-child{border-bottom:1px solid var(--line);font-weight:700}.multi-menu label:hover{background:var(--teal-soft)}input[type=checkbox]{accent-color:var(--teal);width:15px;height:15px;flex-shrink:0}.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-bottom:24px}.kpi{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:18px 20px;position:relative;overflow:hidden}.kpi:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--c,var(--teal))}.kpi .l{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted)}.kpi .v{font-size:24px;font-weight:800;margin-top:8px}.kpi .s{font-size:11px;color:var(--muted);margin-top:5px}.kpi.hero{background:var(--navy);color:var(--hero-ink);border-color:var(--navy)}.kpi.hero .l,.kpi.hero .s{color:var(--hero-muted)}.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:24px;margin-bottom:24px}.panel{min-width:0;padding:22px 0;border-top:1px solid var(--line)}.panel h3{font-size:14px;font-weight:700;margin-bottom:17px;display:flex;justify-content:space-between;align-items:center;gap:10px}.panel h3 small{font-weight:500;color:var(--muted);font-size:11px}.c8{grid-column:span 8}.c4{grid-column:span 4}.c6{grid-column:span 6}.c12{grid-column:span 12}.chart{position:relative;height:290px}.rank{list-style:none}.rank li{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:12px}.rank li:last-child{border:0}.rank .n{width:24px;height:24px;border-radius:6px;background:var(--teal-soft);color:var(--teal);font-weight:800;font-size:10px;display:grid;place-items:center}.rank .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rank .bar{height:3px;background:var(--teal-soft);border-radius:4px;margin-top:5px}.rank .bar i{display:block;height:100%;background:var(--teal);border-radius:4px}.rank .val{font-weight:700;font-variant-numeric:tabular-nums}.tbl-wrap{width:100%;max-width:100%;overflow:auto;max-height:720px;border:1px solid var(--line);border-radius:6px;scrollbar-gutter:stable}table{width:100%;border-collapse:separate;border-spacing:0;font-size:12px}thead th{position:sticky;top:0;background:var(--navy);color:var(--hero-ink);text-align:left;padding:10px 8px;font-weight:600;white-space:nowrap;cursor:pointer;user-select:none;z-index:2}thead th.r,td.r{text-align:right}tbody td{padding:8px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--card)}tbody tr:nth-child(even) td{background:var(--stripe)}tbody tr:hover td{background:var(--teal-soft)}tbody td:last-child,thead th:last-child{padding-right:16px}thead th:last-child{z-index:3}.text-cell{min-width:160px;white-space:normal;overflow-wrap:anywhere}.tag{display:inline-block;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:700;background:var(--teal-soft);color:var(--teal)}.tag.zero{color:var(--rose)}.pager{display:flex;justify-content:space-between;align-items:center;margin-top:14px;color:var(--muted);font-size:12px}.pager button{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:6px 12px;border-radius:6px;font:inherit}.pager button:disabled{opacity:.4;cursor:not-allowed}.hidden{display:none!important}.toast{position:fixed;bottom:24px;right:24px;background:var(--navy);color:var(--hero-ink);padding:14px 20px;border-radius:8px;box-shadow:var(--shadow);transform:translateY(180%);transition:.3s;z-index:50;max-width:calc(100% - 48px)}.toast.show{transform:none}.combo{position:relative}.combo input{padding-right:30px!important}.combo-clear{position:absolute;right:6px;top:8px;border:0;background:none;color:var(--muted);font-size:16px;width:22px;height:22px;display:none}.combo.has .combo-clear{display:block}.combo-list{position:absolute;top:45px;left:0;min-width:320px;width:100%;max-height:320px;overflow:auto;z-index:16;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:6px;box-shadow:var(--shadow);list-style:none}.combo-list li{padding:8px 9px;border-radius:5px;cursor:pointer;font-size:12px;display:flex;justify-content:space-between;gap:10px}.combo-list li small{color:var(--muted);font-size:10px;white-space:nowrap}.combo-list li.act,.combo-list li:hover{background:var(--teal-soft)}.combo-list li mark{background:none;color:var(--teal);font-weight:800}.combo-list .empty{cursor:default;color:var(--muted)}.util-tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:var(--teal-soft);color:var(--teal)}.line-tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:color-mix(in srgb,var(--violet) 14%,transparent);color:var(--violet)}.class-status{font-size:10px;color:var(--muted);margin-left:6px}footer{text-align:center;color:var(--muted);font-size:10px;padding:20px 36px 30px}
 @media(min-width:1600px){.carousel{height:500px}}@media(max-width:1050px){.local-status,.home-badge{display:none}.filters{grid-template-columns:repeat(3,minmax(0,1fr))}.c8,.c4{grid-column:span 12}.slide-copy h2{font-size:38px}}@media(max-width:650px){header{padding:14px 18px;gap:10px;flex-wrap:wrap}.brand{flex:1;min-width:220px}.brand h1{font-size:17px}.spacer{display:none}.btn{padding:9px 12px;font-size:11px}.btn-theme{width:34px;height:34px}.btn-ghost,.btn-primary{flex:1;justify-content:center}main{padding:27px 18px 15px}.home-heading h2{font-size:23px}.home-heading p{font-size:12px}.carousel{height:390px}.slide img{object-position:60% center}.slide-copy{left:7%;top:15%;max-width:85%}.slide-copy h2{font-size:33px}.slide-copy p{font-size:14px}.slide-copy .eyebrow{font-size:8px}.slide-category{margin-top:26px}.slide:after{background:oklch(.22 .045 190 / .45)}.home-bottom{align-items:flex-start;flex-direction:column;gap:18px}.filters{grid-template-columns:repeat(2,minmax(0,1fr))}.c6{grid-column:span 12}.kpis{grid-template-columns:1fr}.pager{gap:10px;flex-wrap:wrap}footer{padding:20px 18px;font-size:9px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
-/* ---------- Contador de progresso (carregamento da planilha) ---------- */
-.progress-overlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:color-mix(in oklab,var(--bg) 55%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);opacity:0;visibility:hidden;transition:opacity .25s ease,visibility .25s ease}
-.progress-overlay.show{opacity:1;visibility:visible}
-.progress-card{background:var(--card);border:1px solid rgba(148,163,184,.25);border-radius:18px;padding:32px 40px;display:flex;flex-direction:column;align-items:center;gap:14px;box-shadow:0 24px 60px rgba(2,12,27,.35);min-width:300px;transform:scale(.96);transition:transform .25s ease}
-.progress-overlay.show .progress-card{transform:scale(1)}
-.progress-ring svg{width:56px;height:56px;animation:prog-spin 1s linear infinite}
-.progress-ring circle{fill:none;stroke:var(--teal);stroke-width:4;stroke-linecap:round;stroke-dasharray:80 40}
-@keyframes prog-spin{to{transform:rotate(360deg)}}
-.progress-pct{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
-.progress-bar{width:240px;height:8px;border-radius:99px;background:var(--bg);overflow:hidden}
-.progress-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--teal-2));border-radius:99px;transition:width .3s ease}
-.progress-msg{font-size:13px;color:var(--muted);max-width:320px;text-align:center;min-height:1.2em}
 </style>
 </head>
 <body>
-<div id="progressOverlay" class="progress-overlay" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Carregando dados da planilha">
-  <div class="progress-card">
-    <div class="progress-ring" aria-hidden="true"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18"></circle></svg></div>
-    <div class="progress-pct" id="progressPct">0%</div>
-    <div class="progress-bar" aria-hidden="true"><i id="progressBar"></i></div>
-    <div class="progress-msg" id="progressMsg">Carregando dados da planilha…</div>
-  </div>
-</div>
 <header>
   <div class="logo" aria-hidden="true">L<span>+</span></div>
   <div class="brand"><h1>Grupo Labmedic</h1><p>Dashboard de Faturamento Analítico · Labmedic e Diag Rio</p></div>
   <div class="spacer"></div><span class="local-status"><i></i> Processamento local</span><button class="btn btn-theme" id="themeToggle" title="Alternar tema" aria-label="Ativar modo escuro">☾</button>
   <input type="file" id="file" accept=".xls,.xlsx,.xml,.csv" multiple hidden>
-  <button class="btn btn-ghost" onclick="openFilePicker()"><span aria-hidden="true">↥</span> Importar planilha</button>
+  <button class="btn btn-ghost" onclick="document.getElementById('file').click()"><span aria-hidden="true">↥</span> Importar planilha</button>
   <button class="btn btn-primary" id="btnExport" disabled><span aria-hidden="true">↓</span> Exportar Excel</button>
   <button class="btn btn-ghost" id="btnPdf" disabled><span aria-hidden="true">▤</span> Relatório PDF</button>
 </header>
@@ -86,6 +66,19 @@
       <div class="panel c6"><h3>Top cidades</h3><div class="chart"><canvas id="chCid"></canvas></div></div>
     </div>
 
+    <div class="panel" id="clsPanel">
+      <h3><button type="button" class="tbl-toggle" id="clsToggle" aria-expanded="false" aria-controls="clsBody"><span class="chev" aria-hidden="true">▸</span> Classificação por linha de atuação</button> <small id="clsInfo"></small></h3>
+      <div id="clsBody" hidden>
+        <p class="cls-help">A classificação é automática (cadastro → catálogo → regras → inferência por similaridade e pelo perfil de compras dos clientes). Itens <b>pendentes</b> ou <b>inferidos</b> aparecem aqui; altere a linha no seletor para corrigir — o ajuste vale na hora para o painel, o Excel e o PDF, fica salvo neste navegador e é reaplicado nas próximas importações.</p>
+        <div class="cls-bar">
+          <input id="clsBusca" placeholder="Buscar produto, código, linha, empresa ou utilização…" autocomplete="off" aria-label="Buscar produto para classificar">
+          <div class="cls-views" role="radiogroup" aria-label="Exibir"><label><input type="radio" name="clsView" value="pend" checked> Pendentes e inferidos</label><label><input type="radio" name="clsView" value="all"> Todos</label><label><input type="radio" name="clsView" value="user"> Meus ajustes</label></div>
+          <div class="cls-btns"><button type="button" class="btn btn-ghost" id="clsExport">↓ Exportar cadastro</button><button type="button" class="btn btn-ghost" id="clsImport">↥ Importar cadastro</button><button type="button" class="btn btn-ghost" id="clsReset">Limpar ajustes</button><input type="file" id="clsFile" accept=".json,application/json" hidden></div>
+        </div>
+        <div class="tbl-wrap cls-wrap"><table><thead><tr><th style="cursor:default">Produto</th><th class="r" style="cursor:default">Itens</th><th class="r" style="cursor:default">Valor</th><th style="cursor:default">Linha de atuação</th><th style="cursor:default">Origem</th><th style="cursor:default">Ações</th></tr></thead><tbody id="clsTbody"></tbody></table></div>
+        <div class="pager"><span id="clsCount"></span></div>
+      </div>
+    </div>
     <div class="panel">
       <h3><button type="button" class="tbl-toggle" id="tblToggle" aria-expanded="false" aria-controls="tblBody"><span class="chev" aria-hidden="true">▸</span> Itens faturados</button> <small id="tblInfo"></small></h3>
       <div id="tblBody" hidden>
@@ -135,6 +128,21 @@ tr.br-row td{background:rgba(245,158,11,.09)}
 .emp-note{margin-top:14px;font-size:11px;color:var(--muted);border-left:3px solid var(--amber);padding:7px 10px;background:color-mix(in srgb,var(--amber) 10%,transparent);border-radius:4px}
 .emp-tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;color:#fff;background:var(--ec)}
 @media(max-width:650px){.emp-k{grid-template-columns:repeat(2,minmax(0,1fr))}.emp-k .v{font-size:15px;white-space:normal}.emp-sec{padding:14px}}
+.cls-help{font-size:12px;color:var(--muted);margin-bottom:14px;max-width:980px}
+.cls-bar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin-bottom:12px}
+.cls-bar>input{flex:1 1 300px;height:39px;padding:9px 11px;border:1px solid var(--line);border-radius:6px;background:var(--input-bg);color:var(--ink);font-size:12px;min-width:0}
+.cls-views{display:flex;gap:12px;flex-wrap:wrap;font-size:12px}.cls-views label{display:flex;gap:6px;align-items:center;cursor:pointer}.cls-views input{accent-color:var(--teal)}
+.cls-btns{display:flex;gap:8px;flex-wrap:wrap}.cls-btns .btn{padding:7px 11px;font-size:12px}
+.cls-wrap{max-height:560px}.cls-wrap td{vertical-align:top}
+.cls-sub{font-size:10.5px;color:var(--muted);margin-top:3px;white-space:normal}
+.cls-sel{height:32px;padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:var(--input-bg);color:var(--ink);font-size:12px;max-width:240px}
+.cls-src{white-space:normal!important;min-width:200px;max-width:320px}
+.cls-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:var(--teal-soft);color:var(--teal)}
+.cls-badge.pend{background:color-mix(in srgb,var(--rose) 15%,transparent);color:var(--rose)}.cls-badge.inf{background:color-mix(in srgb,var(--amber) 18%,transparent);color:color-mix(in srgb,var(--amber) 70%,var(--ink))}.cls-badge.usr{background:color-mix(in srgb,var(--violet) 15%,transparent);color:var(--violet)}
+.cls-act{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.cls-act button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;padding:4px 9px;font-size:11px;font-weight:600}.cls-act .cls-ok{background:var(--teal);color:var(--hero-ink);border-color:var(--teal)}
+.cls-act a{color:var(--teal);font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap}.cls-act a:hover{text-decoration:underline}
+.cls-empty{text-align:center;color:var(--muted);padding:20px!important}
+.line-tag.inf{background:color-mix(in srgb,var(--amber) 18%,transparent);color:color-mix(in srgb,var(--amber) 70%,var(--ink))}
 </style>
 
 <script>
@@ -352,7 +360,7 @@ const CLASS_RULES=[
   ['Sorteador (Flow Cytometry Cell Sorter)',/flow\s*cyt|cell\s*sort|citometria|cytoflex|facsc/i],
   ['Hemoglobina (HPLC/Glicada)',/hplc|hemoglobina|hemoglobin|hb\s*a1c|glicad|glycat/i],
   ['Gasometria',/gasometr|blood\s*gas|gas\s*analy|stat\s*profile|prime\s*ccs|pco.?2|po.?2/i],
-  ['Eletrólise',/eletr[oó]lit|electrolyt|ise\b|sodium|potassium|sodium|cloreto/i],
+  ['Eletrólise',/eletr[oó]lit|electrolyt|\bise\b|sodium|potassium|sodium|cloreto/i],
   ['Marcadores Cardíacos',/troponin|ck[- ]?mb|cardiac|myoglobin|mioglobina|pro.?bnp|nt.?probnp/i],
   ['Coagulação',/coagul|coagulation|hemost|dimero|d[ií]mero|d\-?dimer|vca|inr|trombina|protromb/i],
   ['Hematologia',/hemat|hemacounter|hemoton|cbc|eritro|leuco|plaquet|reticul/i],
@@ -365,16 +373,61 @@ const CLASS_RULES=[
   ['Veterinária',/veterin|vet\b|animal|canin|felin|equino|bovino/i],
   ['Bioquímica',/bioqu[ií]m|biochem|chemistry|qu[ií]mica\s*cl[ií]nica|enzim|lipid|glicose|glucose|ureia|urea|creatinina|reagente/i]
 ];
+// v11: enquadramentos de itens que caíam em 'Outros / não identificado' (base 01–13/10/2026) e correções de falsos positivos
+Object.assign(EXACT_LOOKUP,{
+  'controle de qualid autom stat prof prime plus 105t':'Gasometria',       // controle automático do Stat Profile Prime Plus (Nova Biomedical)
+  'ls 01002 - conditioner 100ml':'Eletrólise',                        // condicionador de eletrodos ISE — cliente compra só insumos de eletrólitos
+  'mini tubo gel separador 0.5ml rack 100':'Bioquímica',              // tubo com gel separador (soro) — mesmo critério do "tubo a vácuo gel"
+  'gasmeter':'Gasometria',                                                 // analisador de gases sanguíneos (locação)
+  'avl':'Eletrólise',                                                 // analisador AVL (linha 9180, eletrólitos) — locação
+  'urivida 200':'Urinálise',                                          // leitor de tiras de urina Urivida (Vida Biotecnologia)
+  'tiras reagentes para urinalise urit 11g':'Urinálise',              // antes caía em Eletrólise ("urinalISE")
+  'tiras reagentes para urinalise urit 14g':'Urinálise',
+  'mini tubo edtak2 0.5ml - pct 100 - gt group':'Hematologia',             // antes caía em Imunologia ("pct")
+  'tubo  vacuo edta k3 4 ml plast rack 100':'Hematologia',                 // antes caía em Bioquímica ("plASt" → AST)
+  'tubo a vacuo gel 3,5 ml plast rack 100':'Bioqu\u00edmica'               // tubo com gel separador (soro)
+});
+Object.assign(PRODUCT_LOOKUP,{'stat prof':'Gasometria','gasmeter':'Gasometria','urivida':'Urinálise','avl 9180':'Eletrólise','smartlyte':'Eletrólise','max ion':'Eletrólise','edta':'Hematologia','gel separador':'Bioqu\u00edmica'});
+Object.assign(CLINICAL_LOOKUP,{'pcru':'Imunologia','pcr us':'Imunologia'});
+/* ---------- Classificação: cadastro do usuário + regras + inferência automática ---------- */
+const CLASS_KEY='labmedic-classificacao-v1';
+let USER_CLASS={};try{USER_CLASS=JSON.parse(localStorage.getItem(CLASS_KEY)||'{}')||{}}catch(e){USER_CLASS={}}
+function saveUserClass(){try{localStorage.setItem(CLASS_KEY,JSON.stringify(USER_CLASS));return true}catch(e){return false}}
+const prodKey=r=>norm(r.produto||'').replace(/\s+/g,' ').trim();
+// casamento por palavra inteira (evita falsos positivos como "pct" em "PCT 100" ou "ast" em "PLAST")
+const _wre=new Map();
+function hasWord(text,k){let re=_wre.get(k);if(!re){re=new RegExp('(^|[^a-z0-9])'+norm(k).replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(?=[^a-z0-9]|$)');_wre.set(k,re)}return re.test(text)}
 function classifyText(r){
-  const text=norm([r.produto||'',r.modelo||'',r.sku||'',r.ncm||'',r.codProd||''].join(' '));
+  const uk=USER_CLASS[prodKey(r)];
+  if(uk)return {linha:uk,fonte:'Ajuste do usuário',confianca:'Alta'};
+  const text=norm([r.produto||'',r.modelo||'',r.sku||''].join(' '));
   const exactKey=norm(r.produto||'');
-  if(EXACT_LOOKUP[exactKey])return {linha:EXACT_LOOKUP[exactKey],fonte:'Cadastro da planilha',confianca:'Alta'};
-  for(const k in PRODUCT_LOOKUP)if(text.includes(norm(k)))return {linha:PRODUCT_LOOKUP[k],fonte:'Catalogo web (modelo/reagente)',confianca:'Alta'};
-  for(const k in CLINICAL_LOOKUP)if(text.includes(norm(k)))return {linha:CLINICAL_LOOKUP[k],fonte:'Catalogo web (parametro clinico)',confianca:'Alta'};
+  if(EXACT_LOOKUP[exactKey]||EXACT_LOOKUP[prodKey(r)])return {linha:EXACT_LOOKUP[exactKey]||EXACT_LOOKUP[prodKey(r)],fonte:'Cadastro da planilha',confianca:'Alta'};
+  for(const k in PRODUCT_LOOKUP)if(hasWord(text,k))return {linha:PRODUCT_LOOKUP[k],fonte:'Catalogo web (modelo/reagente)',confianca:'Alta'};
+  for(const k in CLINICAL_LOOKUP)if(hasWord(text,k))return {linha:CLINICAL_LOOKUP[k],fonte:'Catalogo web (parametro clinico)',confianca:'Alta'};
   for(const [linha,re] of CLASS_RULES)if(re.test(text))return {linha,fonte:'Regra local',confianca:'Media'};
   return {linha:LINHA_OUTROS,fonte:'Sem correspondencia',confianca:'Baixa'};
 }
-function classifyRows(rows){rows.forEach(r=>Object.assign(r,classifyText(r)));return rows}
+const CLS_STOP=new Set('para com sem por dos das caixa pct rack unidade unid testes teste reagente reagentes controle kit pack pacote solucao frasco determinacao comp amostras nivel niveis plast plastico cx und tipo series'.split(' '));
+const clsTokens=s=>new Set(norm(s).split(/[^a-z0-9]+/).filter(t=>t.length>=3&&!CLS_STOP.has(t)&&!/^\d+[a-z]{0,2}$/.test(t)));
+// 2ª passada: o que sobrou em "Outros" é inferido (1) por similaridade com produtos já classificados e (2) pelo perfil de compras dos clientes
+function inferRows(rows){
+  const known=rows.filter(r=>r.linha!==LINHA_OUTROS),cat=new Map(),ctx=new Map();
+  known.forEach(r=>{const k=prodKey(r);if(!cat.has(k))cat.set(k,{t:clsTokens(r.produto),linha:r.linha,nome:r.produto});
+    let m=ctx.get(r.cnpj);if(!m)ctx.set(r.cnpj,m=new Map());m.set(r.linha,(m.get(r.linha)||0)+Math.abs(r.totProd||r.total||0)+1)});
+  const pend=new Map();rows.forEach(r=>{if(r.linha!==LINHA_OUTROS)return;const k=prodKey(r);let a=pend.get(k);if(!a)pend.set(k,a=[]);a.push(r)});
+  for(const rs of pend.values()){
+    const t=clsTokens(rs[0].produto);let best=null,bs=0;
+    if(t.size)for(const c of cat.values()){let i=0;t.forEach(x=>{if(c.t.has(x))i++});const s=i/((t.size+c.t.size-i)||1);if(s>bs){bs=s;best=c}}
+    let res=null;
+    if(best&&bs>=0.6)res={linha:best.linha,fonte:`Inferido: similaridade de ${Math.round(bs*100)}% com “${best.nome}”`,confianca:'Media'};
+    else{const m=new Map();new Set(rs.map(r=>r.cnpj)).forEach(c=>{const x=ctx.get(c);if(x)x.forEach((v,l)=>m.set(l,(m.get(l)||0)+v))});
+      const tot=[...m.values()].reduce((a,b)=>a+b,0),top=[...m.entries()].sort((a,b)=>b[1]-a[1])[0];
+      if(top&&tot&&top[1]/tot>=0.6)res={linha:top[0],fonte:`Inferido: ${Math.round(top[1]/tot*100)}% das compras dos clientes em ${top[0]}`,confianca:'Baixa'}}
+    if(res)rs.forEach(r=>Object.assign(r,res,{inferido:true}));
+  }
+}
+function classifyRows(rows){rows.forEach(r=>{Object.assign(r,classifyText(r));r.inferido=false});inferRows(rows);return rows}
 function classificationQuery(r){return norm((r.produto||'')+' '+(r.modelo||'')+' '+(r.sku||'')).trim()}
 
 
@@ -384,19 +437,8 @@ const NUMF=['qtd','preco','totProd','desc','frete','icmsst','fcpst','ipi','total
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3200)}
 
-/* ---------- Contador de progresso ---------- */
-function progShow(msg){const p=$('progressOverlay');if(!p)return;p.classList.add('show');progSet(0,msg||'Carregando dados da planilha…')}
-function progSet(pct,msg){const p=$('progressOverlay');if(!p)return;pct=Math.max(0,Math.min(100,Math.round(pct)));$('progressPct').textContent=pct+'%';$('progressBar').style.width=pct+'%';if(msg)$('progressMsg').textContent=msg;p.setAttribute('aria-valuenow',pct)}
-function progHide(){const p=$('progressOverlay');if(!p)return;setTimeout(()=>p.classList.remove('show'),350)}
-
 /* ---------- Importação ---------- */
-/* Contador ativado no clique de abertura do arquivo; recolhido se o operador cancelar */
-let pickerOpen=false;
-function openFilePicker(){pickerOpen=true;progShow('Aguardando seleção do arquivo…');$('file').click()}
-function pickerCancelled(){if(pickerOpen){pickerOpen=false;progHide()}}
-$('file').addEventListener('cancel',pickerCancelled);
-window.addEventListener('focus',()=>setTimeout(()=>{if(pickerOpen&&!$('file').files.length)pickerCancelled()},800));
-$('file').onchange=e=>{pickerOpen=false;if(e.target.files.length)load([...e.target.files]);else progHide();e.target.value=''};
+$('file').onchange=e=>{if(e.target.files.length)load([...e.target.files]);e.target.value=''};
 let slideIndex=0,paused=false;
 const slides=[...document.querySelectorAll('.slide')],dots=[...document.querySelectorAll('.dot')];
 function showSlide(i){slideIndex=(i+slides.length)%slides.length;slides.forEach((s,n)=>s.classList.toggle('active',n===slideIndex));dots.forEach((d,n)=>{d.classList.toggle('active',n===slideIndex);d.setAttribute('aria-current',String(n===slideIndex))})}
@@ -426,14 +468,10 @@ const perRel=e=>e&&e.per?isoBR(e.per[0])+' a '+isoBR(e.per[1]):'—';
 function perRelAll(list){const ps=list.filter(e=>e.per);if(!ps.length)return '—';return isoBR(ps.map(e=>e.per[0]).sort()[0])+' a '+isoBR(ps.map(e=>e.per[1]).sort().pop())}
 
 async function load(files){
-  progShow('Preparando importação…');
   try{
-    const rows=[],metas=[],seen=new Set();let dup=0,fi=0;
+    const rows=[],metas=[],seen=new Set();let dup=0;
     for(const file of files){
-      fi++;progSet((fi-1)/files.length*85,`Lendo arquivo ${fi} de ${files.length}: ${file.name}`);
-      await new Promise(r=>setTimeout(r)); // cede o loop de eventos para o contador renderizar
       const buf=await file.arrayBuffer();
-      progSet(fi/files.length*85,`Processando ${file.name}…`);
       const head=new TextDecoder().decode(buf.slice(0,400));
       const book=head.includes('<?xml')||head.includes('<Workbook')?parseXML(new TextDecoder('utf-8').decode(buf)):parseBinary(buf);
       for(const sh of book){
@@ -445,7 +483,6 @@ async function load(files){
         metas.push(x.meta);
       }
     }
-    progSet(88,'Consolidando dados…');
     if(!rows.length)throw new Error('Nenhum item encontrado. Verifique se é o relatório de Faturamento Analítico.');
     const m=new Map();
     for(const x of metas){let e=m.get(x.emp);
@@ -458,12 +495,9 @@ async function load(files){
     rows.forEach(r=>{const cr=cnpjRoot(r.cnpj);r.inter=!!cr&&roots.has(cr)&&cr!==cnpjRoot(r.empCnpj)});
     ALL=classifyRows(rows);META.arquivo=[...new Set(files.map(f=>f.name))].join(', ');
     setupFilters();$('empty').classList.add('hidden');$('dash').classList.remove('hidden');$('btnExport').disabled=false;$('btnPdf').disabled=false;
-    progSet(96,'Renderizando painel…');
     apply();
-    progSet(100,'Concluído');
     toast(`${rows.length} itens importados · `+EMPS.map(e=>`${e.emp}: ${NUM.format(rows.filter(r=>r.emp===e.emp).length)}`).join(' · ')+(dup?` · ${dup} duplicados ignorados`:''));
   }catch(err){console.error(err);toast('Erro: '+err.message)}
-  finally{progHide()}
 }
 // SpreadsheetML 2003 (formato nativo do Fluxis) -> [{name, grid}] — uma entrada por aba (Worksheet)
 function parseXML(txt){
@@ -717,8 +751,59 @@ function render(){
   chart('chCid','bar',{labels:cid.map(v=>v.k),datasets:[{label:'Faturamento',data:cid.map(v=>v.total),backgroundColor:'#14c2b4',borderRadius:6}]},{money:true,horiz:true});
   rank('rkCli',group(fr,'cnpj',r=>r.cliente).slice(0,10),k.f.total);
   rank('rkProd',group(fr,r=>r.codProd||r.produto,r=>r.produto).slice(0,10),k.f.total);
-  table();
+  table();renderClass();
 }
+/* ---------- Painel de revisão das linhas de atuação (busca em tempo real + ajustes persistentes) ---------- */
+let clsView='pend';
+function clsProducts(){
+  const m=new Map();
+  for(const r of ALL){const k=prodKey(r);let g=m.get(k);
+    if(!g)m.set(k,g={k,nome:r.produto,cod:r.codProd,linha:r.linha,fonte:r.fonte,conf:r.confianca,inf:r.inferido,emps:new Set(),utils:new Set(),itens:0,total:0});
+    g.emps.add(r.emp);g.utils.add(r.util);g.itens++;g.total+=r.total}
+  return [...m.values()].sort((a,b)=>b.total-a.total);
+}
+function linhaOpts(cur){const ls=[...LAB_LINES.filter(l=>l!==LINHA_OUTROS),LINHA_OUTROS];return ls.map(l=>`<option${l===cur?' selected':''}>${esc(l)}</option>`).join('')}
+function renderClass(){
+  if(!$('clsBody'))return;
+  const all=clsProducts(),pend=all.filter(p=>p.linha===LINHA_OUTROS),inf=all.filter(p=>p.inf),usr=all.filter(p=>USER_CLASS[p.k]);
+  $('clsInfo').innerHTML=`${NUM.format(all.length)} produtos · <b class="${pend.length?'sc-note':''}">${pend.length} sem linha</b> · ${inf.length} inferidos automaticamente · ${usr.length} ajustados por você`;
+  const q=norm($('clsBusca').value).trim(),toks=q.split(/\s+/).filter(Boolean);
+  let list=clsView==='pend'?all.filter(p=>p.linha===LINHA_OUTROS||p.inf):clsView==='user'?usr:all;
+  if(toks.length)list=all.filter(p=>{const t=norm(p.nome+' '+p.cod+' '+p.linha+' '+[...p.emps].join(' ')+' '+[...p.utils].join(' '));return toks.every(x=>t.includes(x))});
+  const shown=list.slice(0,300);
+  $('clsTbody').innerHTML=shown.map(p=>{const st=USER_CLASS[p.k]?'usr':p.linha===LINHA_OUTROS?'pend':p.inf?'inf':'ok';
+    return `<tr class="cls-${st}"><td class="text-cell"><b>${esc(p.nome)}</b><div class="cls-sub">#${esc(p.cod)} · ${[...p.emps].map(e=>`<span class="emp-tag" style="--ec:${empColor(e)}">${esc(e)}</span>`).join(' ')} · ${esc([...p.utils].join(', '))}</div></td>
+      <td class="r">${NUM.format(p.itens)}</td><td class="r">${BRL.format(p.total)}</td>
+      <td><select class="cls-sel" data-k="${esc(p.k)}" aria-label="Linha de atuação de ${esc(p.nome)}">${linhaOpts(p.linha)}</select></td>
+      <td class="cls-src"><span class="cls-badge ${st}">${st==='usr'?'Ajuste seu':st==='pend'?'Pendente':st==='inf'?'Inferido · confirmar':'Automático'}</span><div class="cls-sub">${esc(p.fonte)}${p.conf?' · confiança '+esc(p.conf):''}</div></td>
+      <td><div class="cls-act">${st==='inf'?`<button type="button" class="cls-ok" data-k="${esc(p.k)}" data-l="${esc(p.linha)}">Confirmar</button>`:''}${USER_CLASS[p.k]?`<button type="button" class="cls-undo" data-k="${esc(p.k)}">Desfazer</button>`:''}<a href="https://www.google.com/search?q=${encodeURIComponent(p.nome+' reagente equipamento laboratório')}" target="_blank" rel="noopener" title="Pesquisar o produto na web (nova aba)">Pesquisar ↗</a></div></td></tr>`}).join('')||`<tr><td colspan="6" class="cls-empty">${toks.length?'Nenhum produto encontrado para a busca.':clsView==='pend'?'Nenhuma pendência — todos os produtos estão enquadrados.':'Nenhum ajuste salvo.'}</td></tr>`;
+  $('clsCount').textContent=list.length>shown.length?`Mostrando ${shown.length} de ${list.length} — refine a busca`:`${list.length} produto(s)`;
+}
+function setUserClass(k,linha){if(linha==null)delete USER_CLASS[k];else USER_CLASS[k]=linha;const ok=saveUserClass();reclassify();toast(ok?'Classificação atualizada e salva neste navegador':'Classificação atualizada (não foi possível salvar no navegador — exporte o cadastro)')}
+function reclassify(){
+  if(!ALL.length)return;
+  const box=$('fLinha'),prevOpts=[...box.querySelectorAll('.multi-menu label:not(:first-child) input')].map(i=>i.value),prevSel=selected('fLinha');
+  classifyRows(ALL);
+  const u=[...new Set(ALL.map(r=>r.linha))];
+  multiOptions('fLinha',[...LAB_LINES.filter(v=>u.includes(v)),...u.filter(v=>!LAB_LINES.includes(v)).sort()],'Linha de atuação');
+  const ins=[...box.querySelectorAll('.multi-menu label:not(:first-child) input')];
+  ins.forEach(i=>i.checked=!prevOpts.includes(i.value)||prevSel.includes(i.value));
+  if(ins[0])ins[0].dispatchEvent(new Event('change'));else apply();
+  renderClass();
+}
+(function initClass(){
+  const tg=$('clsToggle');if(!tg)return;
+  tg.onclick=()=>{const b=$('clsBody'),o=b.hidden;b.hidden=!o;tg.setAttribute('aria-expanded',String(o));if(o)renderClass()};
+  let t;$('clsBusca').oninput=()=>{clearTimeout(t);t=setTimeout(renderClass,120)};
+  document.querySelectorAll('[name="clsView"]').forEach(r=>r.onchange=()=>{clsView=r.value;renderClass()});
+  $('clsTbody').addEventListener('change',e=>{const s=e.target.closest('.cls-sel');if(s)setUserClass(s.dataset.k,s.value)});
+  $('clsTbody').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.classList.contains('cls-ok'))setUserClass(b.dataset.k,b.dataset.l);else if(b.classList.contains('cls-undo'))setUserClass(b.dataset.k,null)});
+  $('clsExport').onclick=()=>{const blob=new Blob([JSON.stringify({tipo:'GrupoLabmedic-classificacao',versao:1,gerado:new Date().toISOString(),ajustes:USER_CLASS},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='GrupoLabmedic_Classificacao_Linhas.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),30000)};
+  $('clsImport').onclick=()=>$('clsFile').click();
+  $('clsFile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
+    try{const j=JSON.parse(await f.text()),aj=j.ajustes||j;let n=0;for(const k in aj){if(typeof aj[k]==='string'&&aj[k]){USER_CLASS[norm(k).replace(/\s+/g,' ').trim()]=aj[k];n++}}saveUserClass();reclassify();toast(`${n} ajuste(s) de classificação importados`)}catch(err){toast('Arquivo de cadastro inválido')}};
+  $('clsReset').onclick=()=>{const n=Object.keys(USER_CLASS).length;if(!n)return toast('Não há ajustes salvos');if(!confirm(`Remover os ${n} ajuste(s) de classificação salvos neste navegador?`))return;USER_CLASS={};saveUserClass();reclassify();toast('Ajustes removidos — classificação automática restaurada')};
+})();
 const PAL=['--teal','--navy-2','--amber','--rose','--violet','--green','--teal-2','--muted','--rose','--violet'].map(k=>getComputedStyle(document.documentElement).getPropertyValue(k).trim());
 function chart(id,type,data,o={}){
   Chart.defaults.color=getComputedStyle(document.documentElement).getPropertyValue('--muted').trim();Chart.defaults.borderColor=getComputedStyle(document.documentElement).getPropertyValue('--line').trim();
@@ -741,7 +826,7 @@ function table(){
   const rows=[...listRows(VIEW)].sort((a,b)=>{const x=a[sortK],y=b[sortK];return (x>y?1:x<y?-1:0)*sortDir});
   const pages=Math.max(1,Math.ceil(rows.length/PER));page=Math.min(page,pages-1);
   $('tbody').innerHTML=rows.slice(page*PER,page*PER+PER).map(r=>'<tr'+(isSC(r)?' class="sc-row" title="Remessa sem cobrança — fora do faturamento"':isBr(r)?' class="br-row" title="Brinde / bonificação — fora do faturamento"':'')+'>'+COLS.map(([k,,n])=>{
-    let v=r[k];if(!n&&k!=='data')v=esc(v);if(k==='util')v=`<span class="util-tag">${v}</span>`;else if(k==='emp')v=`<span class="emp-tag" style="--ec:${empColor(r.emp)}">${esc(r.emp)}</span>`+(r.inter?' <span class="util-tag" title="Nota emitida para outra empresa do grupo">intragrupo</span>':'');else if(k==='linha')v=`<span class="line-tag" title="${esc(r.fonte)} · confiança ${esc(r.confianca)}">${esc(v)}</span>`;else if(k==='data')v=fmtD(v)+' '+r.data.toTimeString().slice(0,5);else if(k==='total')v=`<span class="tag ${v===0?'zero':''}">${BRL.format(v)}</span>`;else if(k==='frete'&&isSC(r)&&r.frete>0)v=`<span class="tag sc" title="Frete de remessa sem cobrança (fora do faturamento)">${BRL.format(v)}</span>`;else if(k==='qtd')v=NUM.format(v);else if(n)v=BRL.format(v);
+    let v=r[k];if(!n&&k!=='data')v=esc(v);if(k==='util')v=`<span class="util-tag">${v}</span>`;else if(k==='emp')v=`<span class="emp-tag" style="--ec:${empColor(r.emp)}">${esc(r.emp)}</span>`+(r.inter?' <span class="util-tag" title="Nota emitida para outra empresa do grupo">intragrupo</span>':'');else if(k==='linha')v=`<span class="line-tag${r.inferido?' inf':''}" title="${esc(r.fonte)} · confiança ${esc(r.confianca)}">${esc(v)}</span>`;else if(k==='data')v=fmtD(v)+' '+r.data.toTimeString().slice(0,5);else if(k==='total')v=`<span class="tag ${v===0?'zero':''}">${BRL.format(v)}</span>`;else if(k==='frete'&&isSC(r)&&r.frete>0)v=`<span class="tag sc" title="Frete de remessa sem cobrança (fora do faturamento)">${BRL.format(v)}</span>`;else if(k==='qtd')v=NUM.format(v);else if(n)v=BRL.format(v);
     return `<td class="${n?'r':k==='cliente'||k==='produto'?'text-cell':''}" ${k==='cliente'||k==='produto'?`title="${esc(r[k])}"`:''}>${v}</td>`}).join('')+'</tr>').join('');
   $('tblInfo').textContent=`${NUM.format(rows.length)} de ${NUM.format(ALL.length)} itens`+(remMode(VIEW)?' · remessas com frete a cobrar':'');
   $('pgInfo').textContent=`Página ${page+1} de ${pages}`;
@@ -1061,7 +1146,5 @@ ${body}</body></html>`;
   w.document.open();w.document.write(html);w.document.close();
 }
 </script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
