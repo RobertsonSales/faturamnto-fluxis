@@ -81,7 +81,7 @@
       </div>
     </div>
     <div class="panel">
-      <h3><button type="button" class="tbl-toggle" id="tblToggle" aria-expanded="false" aria-controls="tblBody"><span class="chev" aria-hidden="true">▸</span> Itens faturados</button> <small id="tblInfo"></small></h3>
+      <h3 style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><button type="button" class="tbl-toggle" id="tblToggle" aria-expanded="false" aria-controls="tblBody"><span class="chev" aria-hidden="true">▸</span> Itens faturados</button> <small id="tblInfo"></small> <button type="button" class="btn btn-ghost" id="btnRota" style="margin-left:auto;padding:6px 12px;font-size:12px" title="Clientes únicos e NF-e correspondentes — rota de entregas"><span aria-hidden="true">⛟</span> Rota de entregas (PDF)</button></h3>
       <div id="tblBody" hidden>
       <div class="tbl-wrap" tabindex="0" role="region" aria-label="Registros faturados"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
       <div class="pager" style="display:none"><span id="pgInfo"></span><div><button id="pgPrev">‹ Anterior</button> <button id="pgNext">Próxima ›</button></div></div>
@@ -1144,12 +1144,81 @@ async function exportXlsx(){
   if(brRows.length&&!remMode(VIEW))ag.push(['Brindes por Cliente','Brindes / bonificações por cliente (fora do faturamento)','Cliente',group(brRows,'cnpj',r=>`${r.cliente} (${r.uf})`)],
     ['Brindes por Produto','Brindes / bonificações por produto (fora do faturamento)','Produto',group(brRows,r=>r.codProd||r.produto,r=>r.produto)]);
   for(const [n,ti,f,d] of ag){const s=dataSheet(wb,n,ti,aggCols(f,n==='Por Dia'?14:undefined,n.startsWith('Remessas')?'Valor (sem cobrança)':n.startsWith('Brindes')?'Valor (brindes)':n.startsWith('Equipamentos')?'Valor (NF-e)':undefined),d,{totals:['notas','itens','qtd','totProd','desc','frete','total']});fixPct(s,d.length)}
+  routeSheet(wb,VIEW);
   const buf=await wb.xlsx.writeBuffer();
   const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`GrupoLabmedic_Faturamento_${EL.map(e=>e.emp.replace(/\s+/g,'')).join('-')}_${$('fIni').value}_a_${$('fFim').value}.xlsx`;
   document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),30000);
   toast('Planilha Excel gerada com sucesso');
 }
+/* ---------- Rota de entregas: clientes únicos × NF-e ---------- */
+function routeStops(rows){
+  const m=new Map();
+  for(const r of rows){const ck=r.cnpj||r.cliente;let c=m.get(ck);if(!c)m.set(ck,c={cnpj:r.cnpj,cliente:r.cliente,cidade:r.cidade,uf:r.uf,nfs:new Map()});
+    let n=c.nfs.get(r.nfk);if(!n)c.nfs.set(r.nfk,n={nf:r.nf,emp:r.emp,data:r.data,utils:new Set(),itens:0,qtd:0,total:0});
+    if(r.data<n.data)n.data=r.data;n.utils.add(r.util);n.itens++;n.qtd+=+r.qtd||0;n.total+=+r.total||0}
+  const L=[...m.values()].map(c=>{const nfs=[...c.nfs.values()].sort((a,b)=>a.data-b.data||String(a.nf).localeCompare(String(b.nf),'pt-BR',{numeric:true}));
+    return {...c,nfs,util:n=>[...n.utils].join(', '),qtd:nfs.reduce((s,n)=>s+n.qtd,0),total:nfs.reduce((s,n)=>s+n.total,0),itens:nfs.reduce((s,n)=>s+n.itens,0)}});
+  const cmp=(a,b)=>String(a||'').localeCompare(String(b||''),'pt-BR');
+  return L.sort((a,b)=>cmp(a.uf,b.uf)||cmp(a.cidade,b.cidade)||cmp(a.cliente,b.cliente));
+}
+function routeSheet(wb,rows){
+  const S=routeStops(rows),N=13;
+  const ws=wb.addWorksheet('Rota de Entregas',{properties:{tabColor:{argb:C.teal}},views:[{state:'frozen',ySplit:5}],pageSetup:{orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,paperSize:9}});
+  banner(ws,`Rota de entregas — ${S.length} cliente(s) único(s) · ${S.reduce((s,c)=>s+c.nfs.length,0)} NF-e`,N);
+  const cols=[['Parada',8],['Cliente',42],['CPF/CNPJ',20],['Cidade',22],['UF',6],['NF-e',10],['Empresa',12],['Emissão',12],['Utilização',22],['Itens',8],['Volume (qtd)',12],['Valor',15],['Recebido por / Assinatura',32]];
+  const hr=ws.getRow(5);cols.forEach(([h,w],i)=>{ws.getColumn(i+1).width=w;const c=hr.getCell(i+1);c.value=h;c.font={name:'Arial',size:10,bold:true,color:{argb:C.white}};c.fill=fill(C.navy);c.border=border;c.alignment={vertical:'middle',horizontal:i>=9&&i<=11?'right':'left',wrapText:true}});hr.height=26;
+  let r=6;
+  S.forEach((c,si)=>{const r0=r,tint=si%2?C.zebra:null;
+    c.nfs.forEach(n=>{const row=ws.getRow(r);
+      [si+1,c.cliente,c.cnpj,c.cidade,c.uf,n.nf,n.emp,xlDate(n.data),[...n.utils].join(', '),n.itens,n.qtd,n.total,''].forEach((v,i)=>{const x=row.getCell(i+1);x.value=v;x.font={name:'Arial',size:9,bold:i<2};x.border=border;x.alignment={vertical:'middle',wrapText:i===1||i===8};if(tint)x.fill=fill(tint)});
+      row.getCell(8).numFmt='dd/mm/yyyy';row.getCell(10).numFmt='#,##0';row.getCell(11).numFmt='#,##0.##';row.getCell(12).numFmt=MONEY;r++});
+    if(r-1>r0)[1,2,3,4,5,13].forEach(k=>ws.mergeCells(r0,k,r-1,k))});
+  const t=ws.getRow(r);t.getCell(1).value='TOTAL';t.getCell(2).value=`${S.length} cliente(s)`;t.getCell(6).value={formula:`COUNTA(F6:F${r-1})`};
+  [10,11,12].forEach(k=>{const L=ws.getColumn(k).letter;t.getCell(k).value={formula:`SUM(${L}6:${L}${r-1})`}});
+  for(let k=1;k<=N;k++){const x=t.getCell(k);x.font={name:'Arial',size:10,bold:true,color:{argb:C.navy}};x.fill=fill(C.soft);x.border={...border,top:{style:'medium',color:{argb:C.teal}}}}
+  t.getCell(10).numFmt='#,##0';t.getCell(11).numFmt='#,##0.##';t.getCell(12).numFmt=MONEY;
+  return ws;
+}
+function openRoutePdf(){
+  if(!VIEW.length)return toast('Não há dados para a rota de entregas');
+  const w=window.open('','_blank');if(!w)return toast('Permita pop-ups para visualizar a rota');
+  const S=routeStops(VIEW),EL=empsIn(VIEW),now=new Date().toLocaleString('pt-BR'),nNF=S.reduce((s,c)=>s+c.nfs.length,0);
+  const cidades=new Set(S.map(c=>c.cidade+'/'+c.uf)).size,tot=S.reduce((s,c)=>s+c.total,0),vol=S.reduce((s,c)=>s+c.qtd,0);
+  const filt=filterList().map(([a,b])=>`${a}: <b>${esc(b)}</b>`).join('');
+  let lastLoc='';
+  const stops=S.map((c,i)=>{const loc=`${c.cidade||'—'} / ${c.uf||'—'}`,grp=loc!==lastLoc?`<div class="loc"><span>${esc(loc)}</span><small>${S.filter(x=>`${x.cidade||'—'} / ${x.uf||'—'}`===loc).length} parada(s)</small></div>`:'';lastLoc=loc;
+    return `${grp}<div class="stop"><div class="sh"><div class="num">${i+1}</div><div class="who"><b>${esc(c.cliente)}</b><span>${esc(c.cnpj||'')}${c.cnpj?' · ':''}${esc(loc)}</span></div><div class="sum"><b>${c.nfs.length}</b> NF-e · ${NUM.format(c.qtd)} un · <b>${BRL.format(c.total)}</b></div></div>
+<table><thead><tr><th style="width:12%">NF-e</th><th style="width:12%">Empresa</th><th style="width:11%">Emissão</th><th>Utilização</th><th class="r" style="width:7%">Itens</th><th class="r" style="width:9%">Volume</th><th class="r" style="width:13%">Valor</th><th class="c" style="width:8%">Entregue</th></tr></thead>
+<tbody>${c.nfs.map(n=>`<tr><td><b>${esc(n.nf)}</b></td><td><span class="dot" style="background:${empColor(n.emp)}"></span>${esc(n.emp)}</td><td>${fmtD(n.data)}</td><td>${esc([...n.utils].join(', '))}</td><td class="r">${NUM.format(n.itens)}</td><td class="r">${NUM.format(n.qtd)}</td><td class="r">${BRL.format(n.total)}</td><td class="c"><span class="box"></span></td></tr>`).join('')}</tbody></table>
+<div class="sign"><div>Recebido por (nome legível)</div><div>Documento</div><div>Data / hora</div><div>Assinatura</div></div></div>`}).join('');
+  const html=`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Rota de entregas — Grupo Labmedic</title><style>
+@page{size:A4 portrait;margin:12mm 11mm}*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#1e293b;background:#e9eef3;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.bar-top{position:sticky;top:0;z-index:5;background:#0b2540;color:#fff;padding:10px 18px;display:flex;justify-content:space-between;align-items:center;font-size:12px}.bar-top button{background:#0fa3a3;color:#fff;border:0;border-radius:6px;padding:8px 14px;font-weight:700;cursor:pointer;margin-left:6px}.bar-top button+button{background:#334e68}
+.page{background:#fff;width:210mm;margin:16px auto;padding:12mm 11mm;box-shadow:0 4px 18px rgba(0,0,0,.12)}
+.hd{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #0b2540;padding-bottom:10px;margin-bottom:12px}.logo{display:flex;gap:10px;align-items:center}.logo i{width:38px;height:38px;border-radius:8px;background:#0b2540;color:#fff;font:800 20px Arial;display:grid;place-items:center;font-style:normal}.hd h1{font-size:19px;color:#0b2540}.hd p{color:#64748b;font-size:9.5px}.hd .r{text-align:right}
+.filters{background:#f3f7fa;border-radius:6px;padding:7px 12px;display:flex;flex-wrap:wrap;gap:3px 16px;margin-bottom:12px;color:#475569;font-size:9px}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-bottom:14px}.k{border:1px solid #dbe4ec;border-left:3px solid #0fa3a3;border-radius:6px;padding:8px 10px}.k:first-child{background:#0b2540;color:#fff;border-color:#0b2540}.k .l{font-size:7.5px;font-weight:700;text-transform:uppercase;color:#64748b}.k:first-child .l{color:#9fc6d6}.k .v{font-size:14px;font-weight:800;margin-top:3px}
+.loc{display:flex;justify-content:space-between;align-items:center;background:#e3f6f4;color:#0b2540;font-weight:800;font-size:11px;padding:6px 10px;border-radius:5px;margin:14px 0 8px;break-after:avoid;border-left:4px solid #0fa3a3}.loc small{font-weight:600;color:#475569;font-size:8.5px}
+.stop{border:1px solid #dbe4ec;border-radius:7px;margin-bottom:9px;overflow:hidden;break-inside:avoid}
+.sh{display:flex;align-items:center;gap:10px;padding:8px 10px;background:#f6f9fb;border-bottom:1px solid #dbe4ec}.num{flex:none;width:28px;height:28px;border-radius:50%;background:#0b2540;color:#fff;display:grid;place-items:center;font-weight:800;font-size:12px}
+.who{flex:1;min-width:0}.who b{display:block;font-size:11px;color:#0b2540}.who span{color:#64748b;font-size:8.5px}.sum{text-align:right;font-size:9px;color:#475569;white-space:nowrap}.sum b{color:#0b2540}
+table{width:100%;border-collapse:collapse;font-size:8.8px}th{background:#0b2540;color:#fff;text-align:left;padding:4px 7px;font-weight:600}td{padding:4px 7px;border-bottom:1px solid #eef2f6}tr:nth-child(even) td{background:#fafcfd}.r{text-align:right;white-space:nowrap}.c{text-align:center}
+.box{display:inline-block;width:11px;height:11px;border:1.4px solid #0b2540;border-radius:2px}.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}
+.sign{display:grid;grid-template-columns:2.2fr 1.2fr 1.1fr 2fr;gap:10px;padding:16px 10px 7px}.sign div{border-top:1px solid #94a3b8;padding-top:3px;font-size:7.5px;color:#64748b;text-transform:uppercase}
+.tot{margin-top:12px;display:flex;justify-content:space-between;background:#0b2540;color:#fff;padding:9px 12px;border-radius:6px;font-weight:700}
+.ft{margin-top:14px;padding-top:7px;border-top:1px solid #dbe4ec;color:#94a3b8;font-size:8px;display:flex;justify-content:space-between}
+@media print{body{background:#fff}.bar-top{display:none}.page{margin:0;width:auto;box-shadow:none;padding:0}}</style></head><body>
+<div class="bar-top"><span>Pré-visualização da rota de entregas — use “Salvar como PDF” na janela de impressão</span><div><button onclick="print()">Salvar / Imprimir PDF</button><button onclick="window.close()">Fechar</button></div></div>
+<div class="page"><div class="hd"><div class="logo"><i>L</i><div><h1>Rota de Entregas</h1><p>Clientes únicos e NF-e correspondentes · Período: ${perMov(VIEW)}</p></div></div><div class="r"><p><b>Grupo Labmedic</b></p><p>${EL.map(e=>esc(e.emp)).join(' · ')}</p><p>Gerado em ${now}</p></div></div>
+<div class="filters">${filt}</div>
+<div class="kpis"><div class="k"><div class="l">Paradas (clientes)</div><div class="v">${NUM.format(S.length)}</div></div><div class="k"><div class="l">NF-e</div><div class="v">${NUM.format(nNF)}</div></div><div class="k"><div class="l">Cidades</div><div class="v">${NUM.format(cidades)}</div></div><div class="k"><div class="l">Volume (un)</div><div class="v">${NUM.format(vol)}</div></div><div class="k"><div class="l">Valor das notas</div><div class="v">${BRL.format(tot)}</div></div></div>
+${stops}
+<div class="tot"><span>${S.length} parada(s) · ${nNF} NF-e · ${cidades} cidade(s)</span><span>${BRL.format(tot)}</span></div>
+<div class="ft"><span>Grupo Labmedic · Roteiro ordenado por UF, cidade e cliente</span><span>Fonte: ${esc(META.arquivo)}</span></div></div></body></html>`;
+  w.document.open();w.document.write(html);w.document.close();
+}
+$('btnRota').onclick=e=>{e.stopPropagation();openRoutePdf()};
 /* ---------- Relatório PDF ---------- */
 $('btnPdf').onclick=openPdf;
 function openPdf(){
