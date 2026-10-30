@@ -70,13 +70,13 @@
     <div class="panel" id="clsPanel">
       <h3><button type="button" class="tbl-toggle" id="clsToggle" aria-expanded="false" aria-controls="clsBody"><span class="chev" aria-hidden="true">▸</span> Classificação por linha de atuação</button> <small id="clsInfo"></small></h3>
       <div id="clsBody" hidden>
-        <p class="cls-help">A classificação é automática (cadastro → catálogo → regras → inferência por similaridade e pelo perfil de compras dos clientes). Itens <b>pendentes</b> ou <b>inferidos</b> aparecem aqui; altere a linha no seletor para corrigir — o ajuste vale na hora para o painel, o Excel e o PDF, fica salvo neste navegador e é reaplicado nas próximas importações.</p>
+        <p class="cls-help">A classificação é automática (cadastro → catálogo → regras → inferência por similaridade e pelo perfil de compras dos clientes). Itens <b>pendentes</b> ou <b>inferidos</b> aparecem aqui; altere a linha no seletor para corrigir — o ajuste vale na hora para o painel, o Excel e o PDF, fica salvo neste navegador e é reaplicado nas próximas importações. Itens de <b>remessa de equipamento</b> (CFOP 5.908, 6.551, 6.912…) entram na linha <b>Equipamento</b>; a coluna <b>CFOP / Tipo de remessa</b> mostra a operação fiscal de cada registro.</p>
         <div class="cls-bar">
           <input id="clsBusca" placeholder="Buscar produto, código, linha, empresa ou utilização…" autocomplete="off" aria-label="Buscar produto para classificar">
           <div class="cls-views" role="radiogroup" aria-label="Exibir"><label><input type="radio" name="clsView" value="pend" checked> Pendentes e inferidos</label><label><input type="radio" name="clsView" value="all"> Todos</label><label><input type="radio" name="clsView" value="user"> Meus ajustes</label></div>
           <div class="cls-btns"><button type="button" class="btn btn-ghost" id="clsExport">↓ Exportar cadastro</button><button type="button" class="btn btn-ghost" id="clsImport">↥ Importar cadastro</button><button type="button" class="btn btn-ghost" id="clsReset">Limpar ajustes</button><input type="file" id="clsFile" accept=".json,application/json" hidden></div>
         </div>
-        <div class="tbl-wrap cls-wrap"><table><thead><tr><th style="cursor:default">Produto</th><th class="r" style="cursor:default">Itens</th><th class="r" style="cursor:default">Valor</th><th style="cursor:default">Linha de atuação</th><th style="cursor:default">Origem</th><th style="cursor:default">Ações</th></tr></thead><tbody id="clsTbody"></tbody></table></div>
+        <div class="tbl-wrap cls-wrap"><table><thead><tr><th style="cursor:default">Produto</th><th class="r" style="cursor:default">Itens</th><th class="r" style="cursor:default">Valor</th><th style="cursor:default">CFOP / Tipo de remessa</th><th style="cursor:default">Linha de atuação</th><th style="cursor:default">Origem</th><th style="cursor:default">Ações</th></tr></thead><tbody id="clsTbody"></tbody></table></div>
         <div class="pager"><span id="clsCount"></span></div>
       </div>
     </div>
@@ -142,6 +142,7 @@ tr.br-row td{background:rgba(245,158,11,.09)}
 .cls-badge.pend{background:color-mix(in srgb,var(--rose) 15%,transparent);color:var(--rose)}.cls-badge.inf{background:color-mix(in srgb,var(--amber) 18%,transparent);color:color-mix(in srgb,var(--amber) 70%,var(--ink))}.cls-badge.usr{background:color-mix(in srgb,var(--violet) 15%,transparent);color:var(--violet)}
 .cls-act{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.cls-act button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;padding:4px 9px;font-size:11px;font-weight:600}.cls-act .cls-ok{background:var(--teal);color:var(--hero-ink);border-color:var(--teal)}
 .cls-act a{color:var(--teal);font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap}.cls-act a:hover{text-decoration:underline}
+.cls-ops{white-space:normal!important;min-width:230px;max-width:340px}.cls-op{margin-bottom:7px;font-size:12px}.cls-op:last-child{margin-bottom:0}
 .cls-empty{text-align:center;color:var(--muted);padding:20px!important}
 .line-tag.inf{background:color-mix(in srgb,var(--amber) 18%,transparent);color:color-mix(in srgb,var(--amber) 70%,var(--ink))}
 .geo-status{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin:-8px 0 18px}.geo-status[hidden]{display:none}.geo-status b{color:var(--ink)}
@@ -159,7 +160,7 @@ const fmtD=d=>d?d.toLocaleDateString('pt-BR'):'';
 let ALL=[],VIEW=[],META={},charts={},page=0,sortK='data',sortDir=1;const PER=1e9;
 const CLASSIFY_VERSION='2026-10 (cadastro local)';
 const LINHA_OUTROS='Outros / não identificado';
-const LAB_LINES=['Bioquímica','Coagulação','Deionizador','Eletrólise','Gasometria','Hematologia','Hemocultura','Hemoglobina (HPLC/Glicada)','Imunologia','Marcadores Cardíacos','Sorteador (Flow Cytometry Cell Sorter)','Urinálise','Microbiologia','Testes Rápidos','Veterinária',LINHA_OUTROS];
+const LAB_LINES=['Bioquímica','Coagulação','Deionizador','Eletrólise','Gasometria','Hematologia','Hemocultura','Hemoglobina (HPLC/Glicada)','Imunologia','Marcadores Cardíacos','Sorteador (Flow Cytometry Cell Sorter)','Urinálise','Microbiologia','Testes Rápidos','Veterinária','Equipamento',LINHA_OUTROS];
 
 const EXACT_LOOKUP={
   'cartao sensor prime ccs comp 200':'Gasometria',
@@ -395,6 +396,44 @@ Object.assign(EXACT_LOOKUP,{
 });
 Object.assign(PRODUCT_LOOKUP,{'stat prof':'Gasometria','gasmeter':'Gasometria','urivida':'Urinálise','avl 9180':'Eletrólise','smartlyte':'Eletrólise','max ion':'Eletrólise','edta':'Hematologia','gel separador':'Bioqu\u00edmica'});
 Object.assign(CLINICAL_LOOKUP,{'pcru':'Imunologia','pcr us':'Imunologia'});
+// v12: revisão dos itens de 'Outros / não identificado' (pesquisa web out/2026), categoria 'Equipamento' e regra fiscal por CFOP
+const CFOP_DESC={'5102':'Venda de mercadoria adquirida ou recebida de terceiros','6102':'Venda de mercadoria adquirida ou recebida de terceiros (interestadual)','6108':'Venda de mercadoria adquirida de terceiros a não contribuinte (interestadual)','5908':'Remessa de bem por conta de contrato de comodato','6908':'Remessa de bem por conta de contrato de comodato (interestadual)','5910':'Remessa em bonificação, doação ou brinde','6910':'Remessa em bonificação, doação ou brinde (interestadual)','5551':'Venda de bem do ativo imobilizado','6551':'Venda de bem do ativo imobilizado (interestadual)','5912':'Remessa de mercadoria ou bem para demonstração','6912':'Remessa de mercadoria ou bem para demonstração (interestadual)'};
+// Equipamento = bem remetido/vendido em NF-e (comodato, locação, ativo imobilizado, demonstração). Recibos de locação continuam na linha analítica do equipamento.
+const EQ_CFOPS=new Set(['5908','6908','5551','6551','5912','6912']);
+const cfopDigits=r=>String(r.cfop||'').replace(/\D/g,'');
+const isEqRem=r=>EQ_CFOPS.has(cfopDigits(r))||/comodato|remessa\s+(para|p\/|de)\s+(loca|alug)|ativo\s+imobilizado|demonstra/.test(norm(r.util));
+const clsKey=r=>prodKey(r)+(isEqRem(r)?'|remessa':'');
+const WEB_RESEARCH={
+  "analisador automatico vida count 1000":{l:"Hematologia",n:"Pesquisa web (out/2026): Vida Biotecnologia — família VIDA COUNT de analisadores hematológicos (380/510/860AL/3000). Nas notas de ativo/demonstração (CFOP 6.551/6.912) a linha é Equipamento.",c:"Média"},
+  "vida s6800":{l:"Bioquímica",n:"Pesquisa web (out/2026): Série VIDA S (S1600/S2800/S3800/S4800/S5600) = analisadores bioquímicos Vida Biotecnologia; página específica do S6800 não localizada.",c:"Média"},
+  "maxcell 300":{l:"Hematologia",n:"Pesquisa web (out/2026): Linha MAXCEL (300BR VET, 500D, 620) = contadores/analisadores hematológicos, listados no portfólio Vida.",c:"Média"},
+  "reny lab host":{l:"Equipamento",n:"Pesquisa web (out/2026): Renylab (Barbacena-MG) fabrica reagentes/corantes; analisador \"Reny Lab Host\" não localizado — enquadrado como Equipamento até confirmação.",c:"Baixa"},
+  "reny lab sub":{l:"Equipamento",n:"Pesquisa web (out/2026): Renylab (Barbacena-MG) fabrica reagentes/corantes; unidade \"Sub\" não localizada — enquadrada como Equipamento até confirmação.",c:"Baixa"},
+  "icounter 19":{l:"Hematologia",n:"Pesquisa web (out/2026): Nome/parâmetros indicam contador hematológico de 19 parâmetros (3-diff); modelo exato não localizado. Mesmo cliente aluga o Sysmex KX 21.",c:"Baixa"},
+  "kx 21":{l:"Hematologia",n:"Pesquisa web (out/2026): Sysmex KX-21/KX-21N — analisador hematológico 3-diff, 17 parâmetros, 60 amostras/h.",c:"Alta"},
+  "loader":{l:"Equipamento",n:"Pesquisa web (out/2026): Acessório (carregador de amostras) de equipamento locado; sem linha analítica própria — enquadrado como Equipamento.",c:"Baixa"},
+  "bm 200":{l:"Bioquímica",n:"Pesquisa web (out/2026): Analisador Bioquímico BM-200 (Vyttra) — automático, 200 testes/h.",c:"Alta"},
+  "ca 500":{l:"Coagulação",n:"Pesquisa web (out/2026): Sysmex CA-500 Series — analisador automático de coagulação (PT, TTPA, fibrinogênio, D-dímero).",c:"Alta"},
+  "diastrom 3dh":{l:"Hematologia",n:"Pesquisa web (out/2026): Modelo exato não localizado; mesmo padrão dos reagentes Diatron já cadastrados (Diaton 3, Diaterg, Dialyse 3CF) e do perfil do cliente (hematologia veterinária).",c:"Baixa"},
+  "celer finecare tromponina quantitativo":{l:"Marcadores Cardíacos",n:"Pesquisa web (out/2026): Wondfo Finecare cTnI Rapid Quantitative Test (troponina I, imunofluorescência) — \"TROMPONINA\" é erro de digitação de troponina.",c:"Alta"},
+  "cartao sensor abg-coox prime plus 440 testes":{l:"Gasometria",n:"Revisão v12 (cadastro/perfil do cliente): Cartão sensor do analisador Stat Profile Prime Plus (Nova Biomedical), mesma família do Prime CCS já cadastrado.",c:"Alta"},
+  "cartucho auto cq sem ureia/creat prime plus 160 t":{l:"Gasometria",n:"Revisão v12 (cadastro/perfil do cliente): Consumível do Stat Profile Prime Plus (gasometria); antes caía em Bioquímica pela palavra \"UREIA/CREAT\".",c:"Alta"},
+  "cartucho calibrador sem ureia/crea prime plus 400t":{l:"Gasometria",n:"Revisão v12 (cadastro/perfil do cliente): Consumível do Stat Profile Prime Plus (gasometria); antes caía em Bioquímica pela palavra \"UREIA/CREA\".",c:"Alta"},
+  "ferro (bm series i) 96 ml":{l:"Bioquímica",n:"Revisão v12 (cadastro/perfil do cliente): Reagente da série BM Series I (Vyttra/BM 200-600M), igual aos demais reagentes BM Series I de bioquímica.",c:"Alta"},
+  "colesterol (d) (bm series i) (5 x 40 ml) 200 ml":{l:"Bioquímica",n:"Revisão v12 (cadastro/perfil do cliente): Reagente da série BM Series I — mesma família de Glicose/Creatinina/Triglicerídeos (D) BM Series I.",c:"Alta"},
+  "auto despro (probe cleanser)":{l:"Bioquímica",n:"Revisão v12 (cadastro/perfil do cliente): Solução desproteinizante de sonda; mesmo produto de \"AUTO DESPRO 500ML\" (Bioquímica).",c:"Média"},
+  "solucao de limp. rinse-frasco 340ml":{l:"Eletrólise",n:"Revisão v12 (cadastro/perfil do cliente): Rinse comprado junto de Cal 1/Cal 2/Max Ion pelo mesmo cliente — kit de calibração/lavagem de eletrodos ISE; sem página do fabricante.",c:"Média"},
+  "solucao calibradora cal 1 - frasco 140ml":{l:"Eletrólise",n:"Revisão v12 (cadastro/perfil do cliente): Calibrador Cal 1 de eletrólitos (par do Cal 2); perfil do cliente 99% Eletrólise.",c:"Média"},
+  "solucao calibrad cal 2 - 140ml":{l:"Eletrólise",n:"Revisão v12 (cadastro/perfil do cliente): Calibrador Cal 2 de eletrólitos (par do Cal 1); perfil do cliente 99% Eletrólise.",c:"Média"},
+  "diaton cp 20 l":{l:"Hematologia",n:"Revisão v12 (cadastro/perfil do cliente): Diluente Diatron 20 L — mesma família de \"Diaton 3 20L\" (Hematologia).",c:"Alta"},
+  "frutosamina 100 ml - 100/390-100":{l:"Bioquímica",n:"Revisão v12 (cadastro/perfil do cliente): Reagente de bioquímica Vida (código 100/xxx), mesma série dos reagentes DC2/Vida.",c:"Alta"},
+  "bili d dpd 100 ml - 100/151-100":{l:"Bioquímica",n:"Revisão v12 (cadastro/perfil do cliente): Bilirrubina direta (DPD) Vida — equivalente a \"BILI D DPD - 208 ML - DC2\".",c:"Alta"},
+  "bili t dpd 100ml - 100/161-100":{l:"Bioquímica",n:"Revisão v12 (cadastro/perfil do cliente): Bilirrubina total (DPD) Vida — equivalente a \"BILI T DPD - 208 ML - DC2\".",c:"Alta"},
+  "cubeta para leitura em ps vol 0,5ml pt/1000":{l:"Bioquímica",n:"Revisão v12 (cadastro/perfil do cliente): Cubeta fotométrica 0,5 mL (poliestireno); item não localizado na web — perfil do cliente majoritariamente Bioquímica.",c:"Baixa"},
+  "ponteira tipo universal 0-200ul pt/1000":{l:"Bioquímica",n:"Revisão v12 (cadastro/perfil do cliente): Consumível genérico de pipetagem; item não localizado na web — perfil do cliente majoritariamente Bioquímica.",c:"Baixa"}
+};
+Object.assign(PRODUCT_LOOKUP,{'vida count':'Hematologia','vida s6800':'Bioquímica','maxcell':'Hematologia','maxcel':'Hematologia','kx 21':'Hematologia','kx-21':'Hematologia','ca 500':'Coagulação','ca 510':'Coagulação','ca 520':'Coagulação','ca 530':'Coagulação','ca 550':'Coagulação','ca 560':'Coagulação','bm 200':'Bioquímica','finecare':'Marcadores Cardíacos','prime plus':'Gasometria','diastrom':'Hematologia'});
+Object.assign(CLINICAL_LOOKUP,{'tromponina':'Marcadores Cardíacos'});
 /* ---------- Classificação: cadastro do usuário + regras + inferência automática ---------- */
 const CLASS_KEY='labmedic-classificacao-v1';
 let USER_CLASS={};try{USER_CLASS=JSON.parse(localStorage.getItem(CLASS_KEY)||'{}')||{}}catch(e){USER_CLASS={}}
@@ -404,8 +443,11 @@ const prodKey=r=>norm(r.produto||'').replace(/\s+/g,' ').trim();
 const _wre=new Map();
 function hasWord(text,k){let re=_wre.get(k);if(!re){re=new RegExp('(^|[^a-z0-9])'+norm(k).replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(?=[^a-z0-9]|$)');_wre.set(k,re)}return re.test(text)}
 function classifyText(r){
-  const uk=USER_CLASS[prodKey(r)];
+  const uk=USER_CLASS[clsKey(r)];
   if(uk)return {linha:uk,fonte:'Ajuste do usuário',confianca:'Alta'};
+  if(isEqRem(r))return {linha:'Equipamento',fonte:`Regra fiscal: CFOP ${r.cfop||'—'} · ${r.util||'remessa'}`,confianca:'Alta'};
+  const wr=WEB_RESEARCH[prodKey(r)];
+  if(wr)return {linha:wr.l,fonte:wr.n,confianca:wr.c};
   const text=norm([r.produto||'',r.modelo||'',r.sku||''].join(' '));
   const exactKey=norm(r.produto||'');
   if(EXACT_LOOKUP[exactKey]||EXACT_LOOKUP[prodKey(r)])return {linha:EXACT_LOOKUP[exactKey]||EXACT_LOOKUP[prodKey(r)],fonte:'Cadastro da planilha',confianca:'Alta'};
@@ -419,7 +461,7 @@ const clsTokens=s=>new Set(norm(s).split(/[^a-z0-9]+/).filter(t=>t.length>=3&&!C
 // 2ª passada: o que sobrou em "Outros" é inferido (1) por similaridade com produtos já classificados e (2) pelo perfil de compras dos clientes
 function inferRows(rows){
   const known=rows.filter(r=>r.linha!==LINHA_OUTROS),cat=new Map(),ctx=new Map();
-  known.forEach(r=>{const k=prodKey(r);if(!cat.has(k))cat.set(k,{t:clsTokens(r.produto),linha:r.linha,nome:r.produto});
+  known.forEach(r=>{if(r.linha==='Equipamento')return;const k=prodKey(r);if(!cat.has(k))cat.set(k,{t:clsTokens(r.produto),linha:r.linha,nome:r.produto});
     let m=ctx.get(r.cnpj);if(!m)ctx.set(r.cnpj,m=new Map());m.set(r.linha,(m.get(r.linha)||0)+Math.abs(r.totProd||r.total||0)+1)});
   const pend=new Map();rows.forEach(r=>{if(r.linha!==LINHA_OUTROS)return;const k=prodKey(r);let a=pend.get(k);if(!a)pend.set(k,a=[]);a.push(r)});
   for(const rs of pend.values()){
@@ -763,11 +805,16 @@ function render(){
 let clsView='pend';
 function clsProducts(){
   const m=new Map();
-  for(const r of ALL){const k=prodKey(r);let g=m.get(k);
-    if(!g)m.set(k,g={k,nome:r.produto,cod:r.codProd,linha:r.linha,fonte:r.fonte,conf:r.confianca,inf:r.inferido,emps:new Set(),utils:new Set(),itens:0,total:0});
-    g.emps.add(r.emp);g.utils.add(r.util);g.itens++;g.total+=r.total}
+  for(const r of ALL){const k=clsKey(r);let g=m.get(k);
+    if(!g)m.set(k,g={k,nome:r.produto,cod:r.codProd,linha:r.linha,fonte:r.fonte,conf:r.confianca,inf:r.inferido,rem:isEqRem(r),emps:new Set(),utils:new Set(),ops:new Map(),itens:0,total:0});
+    g.emps.add(r.emp);g.utils.add(r.util);g.itens++;g.total+=r.total;
+    const ck=cfopDigits(r)+'|'+r.util+'|'+r.tipo;let o=g.ops.get(ck);if(!o)g.ops.set(ck,o={cfop:r.cfop,util:r.util,tipo:r.tipo,n:0});o.n++}
   return [...m.values()].sort((a,b)=>b.total-a.total);
 }
+// CFOP + tipo de remessa (Utilização do Fluxis) de cada operação do produto
+const opsText=p=>[...p.ops.values()].map(o=>(o.cfop||'')+' '+o.util+' '+(CFOP_DESC[cfopDigits(o)]||'')+' '+o.tipo).join(' ');
+const opsHtml=p=>[...p.ops.values()].sort((a,b)=>b.n-a.n).map(o=>{const ds=CFOP_DESC[cfopDigits(o)];
+  return `<div class="cls-op"><b>${o.cfop?esc(o.cfop):'sem CFOP'}</b> · ${esc(o.util)} <span class="cls-sub">(${o.n} ${o.n===1?'item':'itens'})</span>${ds?`<div class="cls-sub">${esc(ds)}</div>`:/recibo/i.test(o.tipo||'')?'<div class="cls-sub">Recibo de locação (sem NF-e)</div>':''}</div>`}).join('');
 function linhaOpts(cur){const ls=[...LAB_LINES.filter(l=>l!==LINHA_OUTROS),LINHA_OUTROS];return ls.map(l=>`<option${l===cur?' selected':''}>${esc(l)}</option>`).join('')}
 function renderClass(){
   if(!$('clsBody'))return;
@@ -775,14 +822,15 @@ function renderClass(){
   $('clsInfo').innerHTML=`${NUM.format(all.length)} produtos · <b class="${pend.length?'sc-note':''}">${pend.length} sem linha</b> · ${inf.length} inferidos automaticamente · ${usr.length} ajustados por você`;
   const q=norm($('clsBusca').value).trim(),toks=q.split(/\s+/).filter(Boolean);
   let list=clsView==='pend'?all.filter(p=>p.linha===LINHA_OUTROS||p.inf):clsView==='user'?usr:all;
-  if(toks.length)list=all.filter(p=>{const t=norm(p.nome+' '+p.cod+' '+p.linha+' '+[...p.emps].join(' ')+' '+[...p.utils].join(' '));return toks.every(x=>t.includes(x))});
+  if(toks.length)list=all.filter(p=>{const t=norm(p.nome+' '+p.cod+' '+p.linha+' '+[...p.emps].join(' ')+' '+[...p.utils].join(' ')+' '+opsText(p));return toks.every(x=>t.includes(x))});
   const shown=list.slice(0,300);
   $('clsTbody').innerHTML=shown.map(p=>{const st=USER_CLASS[p.k]?'usr':p.linha===LINHA_OUTROS?'pend':p.inf?'inf':'ok';
-    return `<tr class="cls-${st}"><td class="text-cell"><b>${esc(p.nome)}</b><div class="cls-sub">#${esc(p.cod)} · ${[...p.emps].map(e=>`<span class="emp-tag" style="--ec:${empColor(e)}">${esc(e)}</span>`).join(' ')} · ${esc([...p.utils].join(', '))}</div></td>
+    return `<tr class="cls-${st}"><td class="text-cell"><b>${esc(p.nome)}</b>${p.rem?' <span class="cls-badge">Remessa de equipamento</span>':''}<div class="cls-sub">#${esc(p.cod)} · ${[...p.emps].map(e=>`<span class="emp-tag" style="--ec:${empColor(e)}">${esc(e)}</span>`).join(' ')} · ${esc([...p.utils].join(', '))}</div></td>
       <td class="r">${NUM.format(p.itens)}</td><td class="r">${BRL.format(p.total)}</td>
+      <td class="cls-ops">${opsHtml(p)}</td>
       <td><select class="cls-sel" data-k="${esc(p.k)}" aria-label="Linha de atuação de ${esc(p.nome)}">${linhaOpts(p.linha)}</select></td>
       <td class="cls-src"><span class="cls-badge ${st}">${st==='usr'?'Ajuste seu':st==='pend'?'Pendente':st==='inf'?'Inferido · confirmar':'Automático'}</span><div class="cls-sub">${esc(p.fonte)}${p.conf?' · confiança '+esc(p.conf):''}</div></td>
-      <td><div class="cls-act">${st==='inf'?`<button type="button" class="cls-ok" data-k="${esc(p.k)}" data-l="${esc(p.linha)}">Confirmar</button>`:''}${USER_CLASS[p.k]?`<button type="button" class="cls-undo" data-k="${esc(p.k)}">Desfazer</button>`:''}<a href="https://www.google.com/search?q=${encodeURIComponent(p.nome+' reagente equipamento laboratório')}" target="_blank" rel="noopener" title="Pesquisar o produto na web (nova aba)">Pesquisar ↗</a></div></td></tr>`}).join('')||`<tr><td colspan="6" class="cls-empty">${toks.length?'Nenhum produto encontrado para a busca.':clsView==='pend'?'Nenhuma pendência — todos os produtos estão enquadrados.':'Nenhum ajuste salvo.'}</td></tr>`;
+      <td><div class="cls-act">${st==='inf'?`<button type="button" class="cls-ok" data-k="${esc(p.k)}" data-l="${esc(p.linha)}">Confirmar</button>`:''}${USER_CLASS[p.k]?`<button type="button" class="cls-undo" data-k="${esc(p.k)}">Desfazer</button>`:''}<a href="https://www.google.com/search?q=${encodeURIComponent(p.nome+' reagente equipamento laboratório')}" target="_blank" rel="noopener" title="Pesquisar o produto na web (nova aba)">Pesquisar ↗</a></div></td></tr>`}).join('')||`<tr><td colspan="7" class="cls-empty">${toks.length?'Nenhum produto encontrado para a busca.':clsView==='pend'?'Nenhuma pendência — todos os produtos estão enquadrados.':'Nenhum ajuste salvo.'}</td></tr>`;
   $('clsCount').textContent=list.length>shown.length?`Mostrando ${shown.length} de ${list.length} — refine a busca`:`${list.length} produto(s)`;
 }
 function setUserClass(k,linha){if(linha==null)delete USER_CLASS[k];else USER_CLASS[k]=linha;const ok=saveUserClass();reclassify();toast(ok?'Classificação atualizada e salva neste navegador':'Classificação atualizada (não foi possível salvar no navegador — exporte o cadastro)')}
@@ -921,7 +969,7 @@ function rank(id,list,tot){$(id).innerHTML=rankHtml(list,tot)}
 function rankHtml(list,tot){const max=list[0]?.total||1;
   return list.map((g,i)=>`<li><span class="n">${i+1}</span><div style="min-width:0"><div class="nm" title="${esc(g.label)}">${esc(g.label)}</div><div class="bar"><i style="width:${g.total/max*100}%"></i></div></div><div style="text-align:right"><div class="val">${BRL.format(g.total)}</div><div style="font-size:11px;color:var(--muted)">${(g.total/(tot||1)*100).toFixed(1)}% · ${NUM.format(g.qtd)} un</div></div></li>`).join('')||'<li>Sem dados</li>'}
 
-const COLS=[['data','Data'],['emp','Empresa'],['nf','NF'],['cliente','Cliente'],['uf','UF'],['cidade','Cidade'],['vend','Vend.'],['cfop','CFOP'],['util','Utilização'],['linha','Linha de atuação'],['produto','Produto'],['qtd','Qtd',1],['preco','Preço',1],['totProd','T. Prod.',1],['desc','Desconto',1],['frete','Frete',1],['total','Total',1]];
+const COLS=[['data','Data'],['emp','Empresa'],['nf','NF'],['cliente','Cliente'],['uf','UF'],['cidade','Cidade'],['vend','Vend.'],['cfop','CFOP'],['util','Utilização / Tipo de remessa'],['linha','Linha de atuação'],['produto','Produto'],['qtd','Qtd',1],['preco','Preço',1],['totProd','T. Prod.',1],['desc','Desconto',1],['frete','Frete',1],['total','Total',1]];
 function table(){
   $('thead').innerHTML='<tr>'+COLS.map(([k,l,n])=>`<th class="${n?'r':''}" data-k="${k}">${l}${sortK===k?(sortDir>0?' ▲':' ▼'):''}</th>`).join('')+'</tr>';
   $('thead').querySelectorAll('th').forEach(th=>th.onclick=()=>{const k=th.dataset.k;sortDir=sortK===k?-sortDir:1;sortK=k;table()});
@@ -929,7 +977,7 @@ function table(){
   const pages=Math.max(1,Math.ceil(rows.length/PER));page=Math.min(page,pages-1);
   $('tbody').innerHTML=rows.slice(page*PER,page*PER+PER).map(r=>'<tr'+(isSC(r)?' class="sc-row" title="Remessa sem cobrança — fora do faturamento"':isBr(r)?' class="br-row" title="Brinde / bonificação — fora do faturamento"':'')+'>'+COLS.map(([k,,n])=>{
     let v=r[k];if(!n&&k!=='data')v=esc(v);if(k==='util')v=`<span class="util-tag">${v}</span>`;else if(k==='emp')v=`<span class="emp-tag" style="--ec:${empColor(r.emp)}">${esc(r.emp)}</span>`+(r.inter?' <span class="util-tag" title="Nota emitida para outra empresa do grupo">intragrupo</span>':'');else if(k==='linha')v=`<span class="line-tag${r.inferido?' inf':''}" title="${esc(r.fonte)} · confiança ${esc(r.confianca)}">${esc(v)}</span>`;else if(k==='data')v=fmtD(v)+' '+r.data.toTimeString().slice(0,5);else if(k==='total')v=`<span class="tag ${v===0?'zero':''}">${BRL.format(v)}</span>`;else if(k==='frete'&&isSC(r)&&r.frete>0)v=`<span class="tag sc" title="Frete de remessa sem cobrança (fora do faturamento)">${BRL.format(v)}</span>`;else if(k==='qtd')v=NUM.format(v);else if(n)v=BRL.format(v);
-    return `<td class="${n?'r':k==='cliente'||k==='produto'?'text-cell':''}" ${k==='cliente'||k==='produto'?`title="${esc(r[k])}"`:''}>${v}</td>`}).join('')+'</tr>').join('');
+    return `<td class="${n?'r':k==='cliente'||k==='produto'?'text-cell':''}" ${k==='cliente'||k==='produto'?`title="${esc(r[k])}"`:k==='cfop'&&CFOP_DESC[cfopDigits(r)]?`title="${esc(CFOP_DESC[cfopDigits(r)])}"`:''}>${v}</td>`}).join('')+'</tr>').join('');
   $('tblInfo').textContent=`${NUM.format(rows.length)} de ${NUM.format(ALL.length)} itens`+(remMode(VIEW)?' · remessas com frete a cobrar':'');
   $('pgInfo').textContent=`Página ${page+1} de ${pages}`;
   $('pgPrev').disabled=page===0;$('pgNext').disabled=page>=pages-1;
