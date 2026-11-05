@@ -19,7 +19,7 @@
 <body>
 <header>
   <div class="logo" aria-hidden="true">L<span>+</span></div>
-  <div class="brand"><h1>Grupo Labmedic</h1><p>Dashboard de Faturamento Analítico · Labmedic e Diag Rio</p></div>
+  <div class="brand"><h1>Grupo Labmedic</h1><p>Dashboard de Faturamento Analítico · Labmedic e Diag Rio · vendedores, recebíveis e documentos</p></div>
   <div class="spacer"></div><span class="local-status"><i></i> Processamento local</span><button class="btn btn-theme" id="themeToggle" title="Alternar tema" aria-label="Ativar modo escuro">☾</button>
   <input type="file" id="file" accept=".xls,.xlsx,.xml,.csv" multiple hidden>
   <button class="btn btn-ghost" onclick="document.getElementById('file').click()"><span aria-hidden="true">↥</span> Importar planilha</button>
@@ -50,10 +50,14 @@
       <div><label for="fClienteBusca">Clientes</label><div class="combo" id="cliCombo"><input id="fClienteBusca" placeholder="Todos os clientes" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="cliList"><button type="button" class="combo-clear" id="cliClear" aria-label="Limpar cliente">×</button><ul class="combo-list hidden" id="cliList" role="listbox"></ul><input type="hidden" id="fCliente"></div></div>
       <div><label id="labelUtil">Utilização</label><div id="fUtil" class="multi" aria-labelledby="labelUtil"></div></div>
       <div><label id="labelLinha">Linha de atuação</label><div id="fLinha" class="multi" aria-labelledby="labelLinha"></div></div>
-      <div><label>Busca (cliente, produto, NF)</label><input id="fBusca" placeholder="Digite para filtrar..."></div>
+      <div><label id="labelVend">Vendedor</label><div id="fVend" class="multi" aria-labelledby="labelVend"></div></div>
+      <div><label id="labelRec">Forma de recebimento</label><div id="fRec" class="multi" aria-labelledby="labelRec"></div></div>
+      <div><label>Status “Autorizado”</label><label class="chk-f" title="Documentos com status Autorizado (no relatório atual: recibos de locação)"><input type="checkbox" id="fAut" checked><span>Incluir no cômputo<small id="fAutN"></small></span></label></div>
+      <div><label>Busca (cliente, produto, NF, lote, observação)</label><input id="fBusca" placeholder="Digite para filtrar..."></div>
     </div>
 
     <div class="kpis" id="kpis"></div>
+    <div class="panel" id="insBox"></div>
     <div class="panel" id="empBox"></div>
     <div class="panel" id="concilBox"></div>
 
@@ -61,10 +65,14 @@
       <div class="panel c8"><h3>Faturamento diário <small id="diaInfo">Total líquido × Desconto</small></h3><div class="chart"><canvas id="chDia"></canvas></div></div>
       <div class="panel c4"><h3>Por estado</h3><div class="chart"><canvas id="chUf"></canvas></div></div>
       <div class="panel c6"><h3>Top 10 clientes <small>por faturamento</small></h3><ul class="rank" id="rkCli"></ul></div>
-      <div class="panel c6"><h3>Top 10 produtos <small>por faturamento</small></h3><ul class="rank" id="rkProd"></ul></div>
-      <div class="panel c6"><h3>Locações por equipamento <small id="locInfo"></small></h3><div class="chart"><canvas id="chLoc"></canvas></div></div>
+      <div class="panel c6"><h3>Top 10 produtos <small>por faturamento · exclui recibos de locação</small></h3><ul class="rank" id="rkProd"></ul></div>
+      <div class="panel c6"><h3><span id="locTitle">Locações por equipamento</span> <small id="locInfo"></small></h3><div class="chart"><canvas id="chLoc"></canvas></div></div>
       <div class="panel c6"><h3>Faturamento por linha de atuação <small id="linhaInfo"></small></h3><div class="chart"><canvas id="chLinha"></canvas></div></div>
       <div class="panel c6"><h3>Top cidades</h3><div class="chart"><canvas id="chCid"></canvas></div></div>
+      <div class="panel c6"><h3>Faturamento por vendedor <small>locação · insumos · vendas sem cobrança</small></h3><div class="chart"><canvas id="chVend"></canvas></div></div>
+      <div class="panel c8"><h3>Vencimentos dos recebíveis <small id="vencInfo"></small></h3><div class="chart"><canvas id="chVenc"></canvas></div></div>
+      <div class="panel c4"><h3>Por forma de recebimento</h3><div class="chart"><canvas id="chRec"></canvas></div></div>
+      <div class="panel c12"><h3>Desempenho por vendedor <small id="vendInfo"></small></h3><div class="tbl-wrap vend-wrap"><table><thead><tr><th style="cursor:default">#</th><th style="cursor:default">Vendedor</th><th style="cursor:default">Empresa(s)</th><th class="r" style="cursor:default">Faturamento</th><th class="r" style="cursor:default">% part.</th><th class="r" style="cursor:default">Documentos</th><th class="r" style="cursor:default">Clientes</th><th class="r" style="cursor:default">Ticket médio</th><th class="r" style="cursor:default">Locações</th><th class="r" style="cursor:default">Insumos</th><th class="r" style="cursor:default">Vendas s/ cobrança</th><th class="r" style="cursor:default">Desconto</th><th class="r" style="cursor:default">% desc.</th></tr></thead><tbody id="vendTbody"></tbody></table></div></div>
     </div>
 
     <div class="panel" id="clsPanel">
@@ -81,8 +89,14 @@
       </div>
     </div>
     <div class="panel">
-      <h3 style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><button type="button" class="tbl-toggle" id="tblToggle" aria-expanded="false" aria-controls="tblBody"><span class="chev" aria-hidden="true">▸</span> Itens faturados</button> <small id="tblInfo"></small> <button type="button" class="btn btn-ghost" id="btnRota" style="margin-left:auto;padding:6px 12px;font-size:12px" title="Clientes únicos e NF-e correspondentes — rota de entregas"><span aria-hidden="true">⛟</span> Rota de entregas (PDF)</button></h3>
+      <h3 style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><button type="button" class="tbl-toggle" id="tblToggle" aria-expanded="false" aria-controls="tblBody"><span class="chev" aria-hidden="true">▸</span> Registros faturados</button> <small id="tblInfo"></small> <span class="seg" id="tblMode" role="group" aria-label="Visualizar"><button type="button" data-m="itens" aria-pressed="true">Itens</button><button type="button" data-m="docs" aria-pressed="false">Documentos</button></span> <button type="button" class="btn btn-ghost" id="btnListPdf" style="margin-left:auto;padding:6px 12px;font-size:12px" title="PDF dos registros exibidos neste quadro (filtros, visão e ordenação atuais)"><span aria-hidden="true">▤</span> PDF da lista</button><button type="button" class="btn btn-ghost" id="btnRota" style="padding:6px 12px;font-size:12px" title="Clientes únicos e NF-e correspondentes — rota de entregas"><span aria-hidden="true">⛟</span> Rota de entregas (PDF)</button></h3>
       <div id="tblBody" hidden>
+      <div class="tf">
+        <div class="tf-q"><span aria-hidden="true">⌕</span><input id="tfQ" autocomplete="off" placeholder="Filtrar registros… ex.: blessing >5000 · nf:20011 · vend:carlos · lote:0024 · 28/10 · -recibo" aria-label="Filtro inteligente dos registros" aria-describedby="tfHelp"><button type="button" id="tfClear" title="Limpar filtros do quadro">Limpar</button></div>
+        <p class="tf-help" id="tfHelp">Combine termos (todos precisam bater). <b>campo:valor</b> — cli, nf, vend, prod, lote, serial, obs, uf, cidade, util, linha, rec, cfop, emp, status, cnpj · <b>&gt;</b> / <b>&lt;</b> / <b>1000..5000</b> no valor · <b>dd/mm</b> na emissão · <b>-termo</b> exclui · "aspas" para expressões.</p>
+        <div class="tf-chips" id="tfChips"></div>
+        <div class="tf-sum" id="tfSum" aria-live="polite"></div>
+      </div>
       <div class="tbl-wrap" tabindex="0" role="region" aria-label="Registros faturados"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
       <div class="pager" style="display:none"><span id="pgInfo"></span><div><button id="pgPrev">‹ Anterior</button> <button id="pgNext">Próxima ›</button></div></div>
       </div>
@@ -91,6 +105,7 @@
 </main>
 <footer>Grupo Labmedic · LABMEDIC Comércio e Manutenção de Equipamentos Médicos LTDA · DIAG RIO Produtos para Laboratório LTDA · Processamento local, nenhum dado sai do seu computador.</footer>
 <div class="toast" id="toast"></div>
+<dialog id="docDlg" class="doc-dlg" aria-labelledby="docTitle"><div id="docBody"></div></dialog>
 <style>
 .tbl-toggle{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:8px;font:inherit;font-weight:700;color:inherit}
 .tbl-toggle:focus-visible{outline:2px solid var(--teal);outline-offset:3px;border-radius:4px}
@@ -100,7 +115,7 @@
 .sc-note{color:var(--rose)}
 .cc table{width:100%;border-collapse:collapse;font-size:13px}.cc th,.cc td{padding:7px 10px;border-bottom:1px solid rgba(128,128,128,.22);text-align:left}
 .cc .r,.cc th.r{text-align:right}.cc tr.cc-sub td{font-weight:700;background:rgba(128,128,128,.10)}.cc tr.cc-tot td{font-weight:800;border-top:2px solid currentColor}
-tr.sc-row td{background:rgba(226,86,107,.07)}
+tr.sc-row td{background:rgba(124,92,255,.07)}
 tr.br-row td{background:rgba(245,158,11,.09)}
 .tag.sc{background:rgba(226,86,107,.16);color:var(--rose);border-radius:6px;padding:1px 6px;font-weight:700}
 .filters{grid-template-columns:repeat(4,minmax(0,1fr))}
@@ -149,6 +164,41 @@ tr.br-row td{background:rgba(245,158,11,.09)}
 .geo-dot{width:8px;height:8px;border-radius:50%;background:var(--green)}.geo-dot.run{background:var(--amber);animation:geoP 1s infinite alternate}.geo-dot.warn{background:var(--rose)}
 @keyframes geoP{to{opacity:.3}}
 .geo-bar{display:inline-block;width:140px;height:5px;border-radius:4px;background:var(--line);overflow:hidden}.geo-bar i{display:block;height:100%;background:var(--teal);transition:width .3s}
+.ins{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px}
+.ins li{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--teal);border-radius:8px;padding:12px 14px;font-size:12px;line-height:1.5}
+.ins li b:first-child{display:block;font-size:10px;text-transform:uppercase;color:var(--muted);margin-bottom:3px}.ins li.warn{border-left-color:var(--amber)}.ins li.good{border-left-color:var(--green)}
+.vend-wrap{max-height:460px}.vbar{height:3px;background:var(--teal-soft);border-radius:3px;margin-top:4px;min-width:90px}.vbar i{display:block;height:100%;background:var(--teal);border-radius:3px}
+.util-tag.house{background:color-mix(in srgb,var(--navy-2) 14%,transparent);color:var(--navy-2)}.util-tag.none{background:color-mix(in srgb,var(--muted) 14%,transparent);color:var(--muted)}
+tr.clk{cursor:pointer}tr.clk:focus-visible td{outline:2px solid var(--teal);outline-offset:-2px}
+#tbody td.text-cell{max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#vendTbody td.text-cell{white-space:normal;min-width:220px}td.obs-cell{max-width:320px;color:var(--muted)}
+.doc-tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:var(--teal-soft);color:var(--teal)}.doc-tag.rec{background:color-mix(in srgb,var(--amber) 18%,transparent);color:color-mix(in srgb,var(--amber) 60%,var(--ink))}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}.seg button{border:0;background:var(--card);color:var(--muted);padding:5px 11px;font-size:11px;font-weight:700}.seg button[aria-pressed=true]{background:var(--teal);color:var(--hero-ink)}
+.doc-dlg{border:0;border-radius:10px;padding:0;width:min(1180px,calc(100% - 24px));max-height:calc(100vh - 32px);margin:auto;background:var(--card);color:var(--ink);box-shadow:0 24px 70px rgba(0,0,0,.35)}
+.doc-dlg::backdrop{background:rgba(8,20,35,.55)}
+#docBody{padding:22px 24px;overflow:auto;max-height:calc(100vh - 32px)}
+.doc-hd{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px}.doc-hd h2{font-size:21px;font-weight:800;margin-top:6px}.doc-hd p{font-size:12px;color:var(--muted)}
+.doc-st{display:inline-block;padding:2px 9px;border-radius:10px;font-size:10px;font-weight:700;background:var(--teal-soft);color:var(--teal)}.doc-st.sc{background:color-mix(in srgb,var(--violet) 15%,transparent);color:var(--violet)}.doc-st.off{background:color-mix(in srgb,var(--rose) 14%,transparent);color:var(--rose)}.doc-st.warn{background:color-mix(in srgb,var(--amber) 18%,transparent);color:color-mix(in srgb,var(--amber) 60%,var(--ink))}
+.doc-nav{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);white-space:nowrap}.doc-nav button{width:32px;height:32px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink);font-size:17px;line-height:1}.doc-nav .doc-x{margin-left:6px;font-size:20px}
+.doc-info{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 18px;border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin-bottom:14px;font-size:12.5px}
+.doc-info span,.doc-vals span{display:block;font-size:9.5px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:2px}.doc-info small{color:var(--muted)}
+.doc-vals{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px}.doc-vals>div{border:1px solid var(--line);border-radius:8px;padding:10px 12px}.doc-vals b{font-size:15px;font-variant-numeric:tabular-nums}.doc-vals .h{background:var(--navy);color:var(--hero-ink);border-color:var(--navy)}.doc-vals .h span{color:var(--hero-muted)}
+#docBody h3{font-size:13px;font-weight:700;margin:14px 0 8px}#docBody h3 small{font-weight:500;color:var(--muted);font-size:11px}
+.doc-items{overflow:auto;border:1px solid var(--line);border-radius:6px;max-height:340px}.doc-items td{white-space:nowrap}.doc-items td.wrap{white-space:normal;min-width:220px}.doc-items small{color:var(--muted)}.doc-items tr.out td{opacity:.55}
+.doc-items thead th{cursor:default}.doc-items tfoot td{position:sticky;bottom:0;background:var(--teal-soft);font-weight:700;padding:8px;border-top:2px solid var(--teal)}
+.doc-obs{white-space:pre-wrap;border:1px solid var(--line);border-left:4px solid var(--teal);border-radius:6px;padding:12px 14px;background:var(--stripe);font-size:12.5px;line-height:1.55}
+.doc-act{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:18px}
+@media(max-width:650px){#docBody{padding:16px}.doc-hd{flex-direction:column}}
+.chk-f{display:flex;align-items:center;gap:9px;height:39px;padding:0 11px;border:1px solid var(--line);border-radius:6px;background:var(--input-bg);cursor:pointer;font-size:12px;text-transform:none!important;font-weight:600!important;color:var(--ink)!important;margin:0!important}
+.chk-f input{accent-color:var(--teal);width:16px;height:16px}.chk-f small{display:block;font-size:10px;color:var(--muted);font-weight:500;line-height:1.1}.chk-f span{line-height:1.15}
+.tf{border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:12px;background:var(--card)}
+.tf-q{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:6px;background:var(--input-bg);padding:0 6px 0 11px}.tf-q:focus-within{outline:2px solid var(--teal);outline-offset:1px}.tf-q>span{color:var(--muted);font-size:16px}
+.tf-q input{flex:1;border:0;background:transparent;color:var(--ink);height:38px;font-size:12.5px;outline:none;min-width:0}.tf-q button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:5px;padding:5px 10px;font-size:11px;font-weight:600}
+.tf-help{font-size:10.5px;color:var(--muted);margin:6px 2px 10px}
+.tf-chips{display:flex;flex-wrap:wrap;gap:8px 18px}.tf-g{display:flex;align-items:center;gap:5px;flex-wrap:wrap}.tf-g>span{font-size:9.5px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-right:2px}
+.tf-c{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:14px;padding:3px 10px;font-size:11px;font-weight:600}.tf-c b{font-weight:700;color:var(--muted);margin-left:2px;font-variant-numeric:tabular-nums}.tf-c.on{background:var(--teal);border-color:var(--teal);color:var(--hero-ink)}.tf-c.on b{color:var(--hero-ink)}.tf-c.nil{opacity:.45}
+.tf-sum{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:11px;padding-top:10px;border-top:1px dashed var(--line);font-size:11.5px;color:var(--muted)}.tf-sum b{color:var(--ink)}.tf-sum .t-sc{color:var(--violet)}.tf-sum .t-fora{color:color-mix(in srgb,var(--amber) 70%,var(--ink))}.tf-sum .t-fat{color:var(--teal)}.tf-int{flex-basis:100%;font-size:10.5px}
+.tf-link{border:0;background:none;color:var(--teal);font-weight:700;text-decoration:underline;margin-left:6px}
+.doc-nav .doc-pdf{width:auto;padding:0 10px;font-size:11px;font-weight:700;margin-right:6px}
 .geo-status button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;padding:3px 9px;font-size:11px;font-weight:600}
 </style>
 
@@ -160,7 +210,8 @@ const fmtD=d=>d?d.toLocaleDateString('pt-BR'):'';
 let ALL=[],VIEW=[],META={},charts={},page=0,sortK='data',sortDir=1;const PER=1e9;
 const CLASSIFY_VERSION='2026-10 (cadastro local)';
 const LINHA_OUTROS='Outros / não identificado';
-const LAB_LINES=['Bioquímica','Coagulação','Deionizador','Eletrólise','Gasometria','Hematologia','Hemocultura','Hemoglobina (HPLC/Glicada)','Imunologia','Marcadores Cardíacos','Sorteador (Flow Cytometry Cell Sorter)','Urinálise','Microbiologia','Testes Rápidos','Veterinária','Equipamento',LINHA_OUTROS];
+const LINHA_LOC='Locação de equipamentos';
+const LAB_LINES=['Bioquímica','Coagulação','Deionizador','Eletrólise','Gasometria','Hematologia','Hemocultura','Hemoglobina (HPLC/Glicada)','Imunologia','Marcadores Cardíacos','Sorteador (Flow Cytometry Cell Sorter)','Urinálise','Microbiologia','Testes Rápidos','Veterinária',LINHA_LOC,'Equipamento',LINHA_OUTROS];
 
 const EXACT_LOOKUP={
   'cartao sensor prime ccs comp 200':'Gasometria',
@@ -445,6 +496,7 @@ function hasWord(text,k){let re=_wre.get(k);if(!re){re=new RegExp('(^|[^a-z0-9])
 function classifyText(r){
   const uk=USER_CLASS[clsKey(r)];
   if(uk)return {linha:uk,fonte:'Ajuste do usuário',confianca:'Alta'};
+  if(r.tipo==='Recibo'&&!r.codProd)return {linha:LINHA_LOC,fonte:'Recibo de locação (relatório sem item discriminado)',confianca:'Alta'};
   if(isEqRem(r))return {linha:'Equipamento',fonte:`Regra fiscal: CFOP ${r.cfop||'—'} · ${r.util||'remessa'}`,confianca:'Alta'};
   const wr=WEB_RESEARCH[prodKey(r)];
   if(wr)return {linha:wr.l,fonte:wr.n,confianca:wr.c};
@@ -461,7 +513,7 @@ const clsTokens=s=>new Set(norm(s).split(/[^a-z0-9]+/).filter(t=>t.length>=3&&!C
 // 2ª passada: o que sobrou em "Outros" é inferido (1) por similaridade com produtos já classificados e (2) pelo perfil de compras dos clientes
 function inferRows(rows){
   const known=rows.filter(r=>r.linha!==LINHA_OUTROS),cat=new Map(),ctx=new Map();
-  known.forEach(r=>{if(r.linha==='Equipamento')return;const k=prodKey(r);if(!cat.has(k))cat.set(k,{t:clsTokens(r.produto),linha:r.linha,nome:r.produto});
+  known.forEach(r=>{if(r.linha==='Equipamento'||r.linha===LINHA_LOC)return;const k=prodKey(r);if(!cat.has(k))cat.set(k,{t:clsTokens(r.produto),linha:r.linha,nome:r.produto});
     let m=ctx.get(r.cnpj);if(!m)ctx.set(r.cnpj,m=new Map());m.set(r.linha,(m.get(r.linha)||0)+Math.abs(r.totProd||r.total||0)+1)});
   const pend=new Map();rows.forEach(r=>{if(r.linha!==LINHA_OUTROS)return;const k=prodKey(r);let a=pend.get(k);if(!a)pend.set(k,a=[]);a.push(r)});
   for(const rs of pend.values()){
@@ -481,6 +533,57 @@ function classificationQuery(r){return norm((r.produto||'')+' '+(r.modelo||'')+'
 
 const FIELDS={'#':'seq','Dt. Registro':'data','Tipo':'tipo','#Código':'codigo','Número':'nf','CpfCnpj':'cnpj','Cliente':'cliente','Estado':'uf','Cidade':'cidade','#Vend.':'vend','Utilização':'util','CFOP':'cfop','#Produto / #Serviço':'codProd','SKU':'sku','Modelo':'modelo','NCM':'ncm','Produto / Serviço':'produto','Quant':'qtd','UN':'un','Preço':'preco','$T. Prod.':'totProd','$Desconto':'desc','$Frete':'frete','ICMS ST':'icmsst','FCP ST':'fcpst','IPI':'ipi','$Total':'total'};
 const NUMF=['qtd','preco','totProd','desc','frete','icmsst','fcpst','ipi','total'];
+// Layout 2026 do "Faturamento analítico" (uma aba por empresa): Número · Dt. Emi · Dt. Venc · Status · Vendedor · Observação …
+const FIELDS2={'Número':'nf','Dt. Emi':'data','Dt. Venc':'venc','Status':'status','Cliente':'cliente','Nome Fantasia':'fantasia','Cnpj/Cpf':'cnpj','Cidade':'cidade','Estado':'uf','Cód.':'codProd','SKU':'sku','Produto':'produto','Serial':'serial','Modelo':'modelo','NCM':'ncm','Lote':'lote','Utilização':'util','Tipo.Rec.':'tipoRec','Cond.Rec.':'condRec','CFOP':'cfop','Qtd.':'qtd','$Unit':'preco','$T Prod':'vProd','%ICMS':'pIcms','$ICMS':'icms','$IPI':'ipi','%Desc':'pDescNF','$Desc':'descNF','$Frete':'frete','$T':'totBruto','$T Liq':'total','Vendedor':'vend','Paciente':'paciente','Médico':'medico','Convênio':'convenio','Observação':'obs'};
+const NUMF2=['qtd','preco','vProd','pIcms','icms','ipi','pDescNF','descNF','frete','totBruto','total'];
+const EMP_INFO={'Labmedic':{cnpj:'21.947.632/0001-37',nome:'LABMEDIC Comércio e Manutenção de Equipamentos Médicos LTDA'},'Diag Rio':{cnpj:'14.878.232/0001-51',nome:'DIAG RIO Produtos para Laboratório LTDA'}};
+const LOC_PROD='Locação de equipamento (recibo)';
+const r2=v=>Math.round((+v||0)*100)/100;
+// data de célula → data local (tolerante ao deslocamento de fuso do SheetJS)
+function cellDate(v){if(v==null||v==='')return null;let d;
+  if(v instanceof Date)d=v;else if(typeof v==='number')d=new Date(Math.round((v-25569)*864e5));
+  else{const s=String(v).trim(),b=s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);d=b?new Date(+b[3],b[2]-1,+b[1]):new Date(s)}
+  if(isNaN(d))return null;const x=new Date(d.getTime()+12*36e5);return new Date(x.getFullYear(),x.getMonth(),x.getDate())}
+const vendName=k=>!k||k==='—'?'Sem vendedor informado':/^\d+$/.test(k)?'Vendedor '+k:k;
+const isHouse=k=>/labmedic|diag\s*rio/.test(norm(k));
+// campos comuns aos dois layouts
+function fin(o){
+  if(!(o.venc instanceof Date))o.venc=null;
+  ['status','tipoRec','condRec','lote','serial','obs','fantasia','sku','modelo','ncm','un','codProd','cfop'].forEach(k=>{if(o[k]==null)o[k]=''});
+  ['icms','descNF','descTab','ipi','icmsst','fcpst','preco','totProd','desc','frete','qtd','total'].forEach(k=>o[k]=+o[k]||0);
+  if(!o.descNF&&!o.descTab)o.descNF=o.desc;
+  o.vend=o.vend||'—';o.vendLabel=vendName(o.vend);
+  o.rec=o.tipoRec||(/sem cobran/.test(norm(o.util))?'Fatura posterior (sem cobrança)':'Não informado');
+  o.prazo=o.venc?Math.round((o.venc-o.data)/864e5):null;
+  return o}
+function extractV2(grid,hi,aba,arquivo){
+  const map={};grid[hi].forEach((v,i)=>{const k=v==null?'':String(v).trim();if(FIELDS2[k]&&map[FIELDS2[k]]==null)map[FIELDS2[k]]=i});
+  const a=norm(aba),emp=/labmedic/.test(a)?'Labmedic':/diag/.test(a)?'Diag Rio':String(aba||'').trim()||'Empresa';
+  const info=EMP_INFO[emp]||{cnpj:'',nome:emp};
+  const meta={aba:String(aba||'').trim(),arquivo,empresa:(info.cnpj?info.cnpj+' - ':'')+info.nome,emitido:'',per:null,cnpj:info.cnpj,nome:info.nome,emp};
+  const rows=[];
+  for(let i=hi+1;i<grid.length;i++){
+    const r=grid[i];if(!r)continue;
+    const nf=r[map.nf];if(nf==null||nf===''||/total/i.test(String(nf)))continue;
+    const o={seq:rows.length+1};
+    for(const k in map){let v=r[map[k]];if(NUMF2.includes(k))v=+v||0;else if(k==='data'||k==='venc')v=cellDate(v);else v=v==null?'':String(v).trim();o[k]=v}
+    if(!o.data)continue;
+    o.nf=String(o.nf).replace(/\.0+$/,'');o.cfop=String(o.cfop||'').replace(/\.0+$/,'');if(!+o.cfop)o.cfop='';
+    o.codProd=String(o.codProd||'').replace(/\.0+$/,'');if(o.codProd==='0')o.codProd='';if(o.ncm==='0')o.ncm='';
+    o.util=o.util||'—';if(/sem cobran/.test(norm(o.util)))o.util='Venda sem cobrança';
+    const locU=/loca|alug/.test(norm(o.util))&&!/remessa|comodato/.test(norm(o.util));
+    o.tipo=locU&&!o.cfop?'Recibo':'NF-e';
+    if(!o.produto)o.produto=o.tipo==='Recibo'?LOC_PROD:'(item sem descrição)';
+    // valor bruto = quantidade × preço de tabela; diferença para o líquido (sem frete/IPI) = desconto sobre tabela
+    const bruto=o.qtd&&o.preco?r2(o.qtd*o.preco):(o.tipo==='Recibo'?o.total:r2(o.totBruto-o.frete-o.ipi+o.descNF));
+    o.totProd=bruto;o.descTab=Math.max(0,r2(bruto-o.descNF+o.frete+o.ipi-o.total));if(o.descTab<0.01)o.descTab=0;
+    o.desc=r2(o.descNF+o.descTab);o.icmsst=0;o.fcpst=0;o.un='';
+    o.dia=localISO(o.data);o.emp=emp;o.empCnpj=info.cnpj;o.nfk=emp+'|'+o.tipo+'|'+o.nf;
+    rows.push(fin(o));
+  }
+  if(rows.length){let mn=rows[0].dia,mx=mn;rows.forEach(r=>{if(r.dia<mn)mn=r.dia;if(r.dia>mx)mx=r.dia});meta.per=[mn,mx]}
+  return rows.length?{rows,meta}:null;
+}
 
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3200)}
@@ -541,7 +644,7 @@ async function load(files){
     EMPS=[...m.values()].filter(e=>rows.some(r=>r.emp===e.emp)).sort((a,b)=>ord(a)-ord(b)||a.emp.localeCompare(b.emp,'pt'));
     const roots=new Set(EMPS.map(e=>cnpjRoot(e.cnpj)).filter(Boolean));
     rows.forEach(r=>{const cr=cnpjRoot(r.cnpj);r.inter=!!cr&&roots.has(cr)&&cr!==cnpjRoot(r.empCnpj)});
-    ALL=classifyRows(rows);META.arquivo=[...new Set(files.map(f=>f.name))].join(', ');
+    ALL=classifyRows(rows);DOCIDX=new Map();ALL.forEach(r=>{let a=DOCIDX.get(r.nfk);if(!a)DOCIDX.set(r.nfk,a=[]);a.push(r)});META.arquivo=[...new Set(files.map(f=>f.name))].join(', ');
     setupFilters();$('empty').classList.add('hidden');$('dash').classList.remove('hidden');$('btnExport').disabled=false;$('btnPdf').disabled=false;
     apply();geoStart();
     toast(`${rows.length} itens importados · `+EMPS.map(e=>`${e.emp}: ${NUM.format(rows.filter(r=>r.emp===e.emp).length)}`).join(' · ')+(dup?` · ${dup} duplicados ignorados`:''));
@@ -572,6 +675,8 @@ function parseBinary(buf){
   return wb.SheetNames.map(n=>({name:n,grid:XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:null}).map(r=>[null,...r])}));
 }
 function extract(grid,aba,arquivo){
+  const h2=grid.findIndex(r=>r&&r.some(v=>v==='Dt. Emi')&&r.some(v=>v==='Número')&&r.some(v=>v==='Cliente'));
+  if(h2>=0)return extractV2(grid,h2,aba,arquivo);
   const hi=grid.findIndex(r=>r&&r.some(v=>v==='Dt. Registro')&&r.some(v=>v==='Cliente'));
   if(hi<0)return null; // aba sem o layout do Faturamento Analítico
   const map={};grid[hi].forEach((v,i)=>{if(v!=null&&FIELDS[String(v).trim()])map[FIELDS[String(v).trim()]]=i});
@@ -599,9 +704,9 @@ function extract(grid,aba,arquivo){
     o.data=dt instanceof Date?dt:new Date(String(dt));
     if(isNaN(o.data))continue;
     o.dia=localISO(o.data);
-    o.vend=o.vend||'—';o.util=o.util||'—';if(/sem cobran/i.test(String(o.util).normalize('NFD').replace(/[̀-ͯ]/g,'')))o.util='Remessa sem cobrança';
-    o.emp=meta.emp;o.empCnpj=meta.cnpj;o.nfk=meta.emp+'|'+o.nf;
-    rows.push(o);
+    o.vend=o.vend||'—';o.util=o.util||'—';if(/sem cobran/.test(norm(o.util)))o.util='Venda sem cobrança';
+    o.emp=meta.emp;o.empCnpj=meta.cnpj;o.nfk=meta.emp+'|'+o.tipo+'|'+o.nf;
+    rows.push(fin(o));
   }
   return rows.length?{rows,meta}:null;
 }
@@ -616,13 +721,14 @@ function multiOptions(id,vals,label){
   function sync(){const checked=inputs.filter(i=>i.checked);all.checked=checked.length===inputs.length;all.indeterminate=checked.length>0&&checked.length<inputs.length;summary.textContent=all.checked?'Todas as opções':checked.length?checked.length+' selecionadas':'Nenhuma opção';apply()}
   all.onchange=()=>{inputs.forEach(i=>i.checked=all.checked);sync()};inputs.forEach(i=>i.onchange=sync);summary.textContent='Todas as opções';
 }
+function setMulti(id,vals){const ins=[...$(id).querySelectorAll('.multi-menu label:not(:first-child) input')];ins.forEach(i=>i.checked=vals.includes(i.value));ins[0]&&ins[0].onchange()}
 function selected(id){return [...$(id).querySelectorAll('.multi-menu label:not(:first-child) input:checked')].map(i=>i.value)}
 // Fecha os menus de múltipla seleção ao clicar fora, ao abrir outro filtro ou ao pressionar Esc
 document.addEventListener('click',e=>{document.querySelectorAll('.multi details[open]').forEach(d=>{if(!d.contains(e.target))d.open=false})});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.multi details[open]').forEach(d=>{d.open=false;d.querySelector('summary')?.focus()})});
 function filterRecords(rows, filters) {
   const q = filters.query.trim().toLowerCase();
-  return rows.filter((r) => (!filters.ini || r.dia >= filters.ini) && (!filters.fim || r.dia <= filters.fim) && (!filters.emps||filters.emps.includes(r.emp)) && filters.ufs.includes(r.uf) && (!filters.cliente || r.cliente === filters.cliente) && filters.utils.includes(r.util) && filters.linhas.includes(r.linha) && (!q || (r.cliente + " " + r.produto + " " + r.nf + " " + r.cnpj).toLowerCase().includes(q)));
+  return rows.filter((r) => (!filters.ini || r.dia >= filters.ini) && (!filters.fim || r.dia <= filters.fim) && (!filters.emps||filters.emps.includes(r.emp)) && filters.ufs.includes(r.uf) && (!filters.cliente || r.cliente === filters.cliente) && filters.utils.includes(r.util) && filters.linhas.includes(r.linha) && (!filters.vends||filters.vends.includes(r.vend)) && (filters.aut!==false||norm(r.status)!=='autorizado') && (!filters.recs||filters.recs.includes(r.rec)) && (!q || (r.cliente + " " + r.fantasia + " " + r.produto + " " + r.nf + " " + r.cnpj + " " + r.lote + " " + r.vend + " " + r.obs).toLowerCase().includes(q)));
 }
 
 const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
@@ -647,13 +753,18 @@ function setupClientCombo(){
 function setupFilters(){
   const u=k=>[...new Set(ALL.map(r=>r[k]))].sort((a,b)=>String(a).localeCompare(String(b),'pt',{numeric:true}));
   multiOptions('fEmp',EMPS.map(e=>e.emp),'Empresa');
-  multiOptions('fUf',u('uf'),'Estado');setupClientCombo();multiOptions('fUtil',u('util'),'Utilização');multiOptions('fLinha',[...LAB_LINES.filter(v=>ALL.some(r=>r.linha===v)),...u('linha').filter(v=>!LAB_LINES.includes(v))],'Linha de atuação');
+  multiOptions('fUf',u('uf'),'Estado');setupClientCombo();
+  multiOptions('fVend',[...new Set(ALL.map(r=>r.vend))].sort((a,b)=>(a==='—')-(b==='—')||String(a).localeCompare(String(b),'pt')),'Vendedor');
+  $('fVend').querySelectorAll('.multi-menu label:not(:first-child)').forEach(l=>{const i=l.querySelector('input');if(i.value==='—')l.lastChild.textContent='Sem vendedor informado'});
+  multiOptions('fRec',u('rec'),'Forma de recebimento');
+  {const au=ALL.filter(r=>norm(r.status)==='autorizado'),n=new Set(au.map(r=>r.nfk)).size;$('fAut').checked=true;$('fAut').disabled=!au.length;
+   $('fAutN').textContent=au.length?` ${NUM.format(n)} doc. · ${BRL.format(sumBy(au,'total'))}`:' nenhum no relatório';$('fAut').onchange=apply}multiOptions('fUtil',u('util'),'Utilização');multiOptions('fLinha',[...LAB_LINES.filter(v=>ALL.some(r=>r.linha===v)),...u('linha').filter(v=>!LAB_LINES.includes(v))],'Linha de atuação');
   const d=u('dia');$('fIni').value=d[0];$('fFim').value=d[d.length-1];$('fBusca').value='';
   ['fIni','fFim'].forEach(id=>$(id).onchange=apply);
   let t;$('fBusca').oninput=()=>{clearTimeout(t);t=setTimeout(apply,200)};
 }
 function apply(){
-  VIEW=filterRecords(ALL,{ini:$('fIni').value,fim:$('fFim').value,emps:selected('fEmp'),ufs:selected('fUf'),cliente:$('fCliente').value,utils:selected('fUtil'),linhas:selected('fLinha'),query:$('fBusca').value});
+  VIEW=filterRecords(ALL,{ini:$('fIni').value,fim:$('fFim').value,emps:selected('fEmp'),ufs:selected('fUf'),cliente:$('fCliente').value,utils:selected('fUtil'),linhas:selected('fLinha'),vends:selected('fVend'),recs:selected('fRec'),aut:$('fAut').checked,query:$('fBusca').value});
   page=0;render();
 }
 // Texto dos filtros aplicados (usado no Excel e no PDF)
@@ -664,6 +775,9 @@ function filterList(){return [
   ['Estados',`${selected('fUf').length} selecionados`],
   ['Utilização',selected('fUtil').join(', ')],
   ['Linhas',selected('fLinha').join(', ')],
+  ['Vendedores',selected('fVend').length===$('fVend').querySelectorAll('.multi-menu label:not(:first-child) input').length?'Todos':(selected('fVend').map(vendName).join(', ')||'Nenhum')],
+  ...(ALL.some(r=>norm(r.status)==='autorizado')?[['Status “Autorizado”',$('fAut').checked?'Incluído no cômputo':'Excluído do cômputo']]:[]),
+  ['Recebimento',selected('fRec').length===$('fRec').querySelectorAll('.multi-menu label:not(:first-child) input').length?'Todas as formas':(selected('fRec').join(', ')||'Nenhuma')],
   ...($('fBusca').value?[['Busca',$('fBusca').value]]:[])]}
 
 /* ---------- Agregações ---------- */
@@ -679,32 +793,89 @@ function group(rows,key,label){
     g.qtd+=r.qtd;g.totProd+=r.totProd;g.desc+=r.desc;g.frete+=r.frete;g.total+=r.total;g.itens++;g.nfs.add(r.nfk||r.nf)}
   return [...m.values()].map(g=>({...g,notas:g.nfs.size})).sort((a,b)=>b.total-a.total);
 }
-const eqCat=()=>new Set(ALL.filter(isLoc).map(r=>norm(r.produto)));
-const isEqNF=(r,eq)=>isNFe0(r)&&!isLoc(r)&&(isCom(r)||eq.has(norm(r.produto))); // equipamento emitido em NF-e (comodato ou modelo do parque de locação)
-const baseRows=rows=>{const eq=eqCat();return rows.filter(r=>!isEqNF(r,eq)&&!isBr(r)&&!isSC(r))}; // base bruta dos cards: só locações e vendas (sem comodato/equipamentos em NF-e, brindes e remessas sem cobrança)
-const cardRows=rows=>remMode(rows)?rows:baseRows(rows); // filtro isolado em itens fora do faturamento: mantém as linhas
+const eqCat=()=>new Set(ALL.filter(r=>isLoc(r)&&r.codProd).map(r=>norm(r.produto)));
+// equipamento emitido em NF-e: comodato / remessa para locação (5908), ativo imobilizado (5551/6551), demonstração (5912/6912) ou modelo do parque de locação
+const isEqNF=(r,eq)=>isNFe0(r)&&!isLoc(r)&&(isCom(r)||isEqRem(r)||eq.has(norm(r.produto)));
+// Faturamento = locações (recibos) + insumos (NF-e de venda) + VENDAS SEM COBRANÇA (cobradas depois em documento único: fatura + boleto)
+const FAT_CATS=new Set(['loc','ins','sc']);
+const baseRows=rows=>{const eq=eqCat();return rows.filter(r=>!isEqNF(r,eq)&&!isBr(r))}; // base dos cards: locações, vendas e vendas sem cobrança
+const cardRows=rows=>remMode(rows)?rows:baseRows(rows);
 const isSC=r=>!isLoc(r)&&norm(r.util).includes('sem cobranca');
-const isBr=r=>!isLoc(r)&&(/brinde|bonifica/.test(norm(r.util))||/^591/.test(String(r.cfop||'').replace(/\D/g,''))); // brindes / bonificações (CFOP 5910)
-function catOf(r,eq){return isEqNF(r,eq)?'eq':isSC(r)?'sc':isBr(r)?'br':isLoc(r)?'loc':(isNFe0(r)&&norm(r.util)==='venda')?'ins':'out'}
-const CAT_LABEL={loc:'Faturável — locação',ins:'Faturável — insumo',sc:'Remessa sem cobrança',br:'Brinde / Bonificação',eq:'Equipamento em NF-e',out:'Outros / não classificado'};
+const isBr=r=>!isLoc(r)&&(/brinde|bonifica/.test(norm(r.util))||/^[56]91[01]/.test(String(r.cfop||'').replace(/\D/g,''))); // brindes / bonificações (CFOP 5910/6910)
+function catOf(r,eq){return isEqNF(r,eq)?'eq':isBr(r)?'br':isLoc(r)?'loc':isSC(r)?'sc':(isNFe0(r)&&norm(r.util)==='venda')?'ins':'out'}
+const CAT_LABEL={loc:'Faturável — locação',ins:'Faturável — insumo',sc:'Faturável — venda sem cobrança (fatura posterior)',br:'Brinde / Bonificação',eq:'Equipamento em NF-e',out:'Outros / não classificado'};
 function concil(rows){ // partição do total das notas por categoria (soma = total geral)
   const eq=eqCat(),cat=r=>catOf(r,eq);
-  const defs=[['loc','Locações (recibos)',1],['ins','Insumos (NF-e de venda)',1],['sc','Remessas sem cobrança',0],['br','Brindes / Bonificações',0],['eq','Equipamentos em NF-e (comodato)',0],['out','Outros / não classificados',0]];
+  const defs=[['loc','Locações (recibos)',1],['ins','Insumos (NF-e de venda com cobrança)',1],['sc','Vendas sem cobrança (fatura e boleto posteriores)',1],['br','Brindes / Bonificações',0],['eq','Equipamentos em NF-e (comodato, locação, ativo, demonstração)',0],['out','Outros / não classificados',0]];
   const tot=rows.reduce((a,r)=>a+r.total,0);
   return {tot,lines:defs.map(([k,cat0,fat])=>{const g=rows.filter(r=>cat(r)===k),v=g.reduce((a,r)=>a+r.total,0);return {k,cat:cat0,fat,n:g.length,total:v,pct:tot?v/tot:0,comp:fat?'Faturamento líquido':'Fora do faturamento'}}).filter(x=>x.n||x.k!=='out')};
 }
 const foraOf=cc=>cc.lines.filter(x=>!x.fat).reduce((a,x)=>a+x.total,0);
 const scOnly=rows=>rows.length>0&&rows.every(isSC);
-const remMode=rows=>{if(!rows.length)return false;const eq=eqCat();return rows.every(r=>isSC(r)||isBr(r)||isEqNF(r,eq))}; // filtro isolou itens fora do faturamento // filtro isolou só remessas sem cobrança: elas viram a base de cards, gráficos e saídas
-const listRows=rows=>scOnly(rows)?rows.filter(r=>r.frete>0):rows; // só remessas: listar apenas as que têm frete a cobrar
-const fatLabel=rows=>!remMode(rows)?'Faturamento líquido':scOnly(rows)?'Remessas sem cobrança (valor)':rows.every(isBr)?'Brindes / Bonificações (valor)':'Valor fora do faturamento';
+const remMode=rows=>{if(!rows.length)return false;const eq=eqCat();return rows.every(r=>isBr(r)||isEqNF(r,eq))}; // filtro isolou só itens fora do faturamento (brindes / equipamentos)
+const listRows=rows=>rows;
+const fatLabel=rows=>!remMode(rows)?'Faturamento líquido':rows.every(isBr)?'Brindes / Bonificações (valor)':'Valor fora do faturamento';
 function fatRows(rows){
   if(remMode(rows))return rows;
-  const eq=new Set(ALL.filter(isLoc).map(r=>norm(r.produto))),nfe=r=>norm(r.tipo).replace(/[^a-z]/g,'')==='nfe';
-  return rows.filter(r=>isLoc(r)||(nfe(r)&&!eq.has(norm(r.produto))&&norm(r.util)==='venda'));
+  const eq=eqCat();return rows.filter(r=>FAT_CATS.has(catOf(r,eq)));
 }
 const isNFe0=r=>norm(r.tipo).replace(/[^a-z]/g,'')==='nfe';
-function fatur(rows){ // recebíveis potenciais: locações + insumos de NF-e de venda (o $Total já embute o frete); exclui remessas sem cobrança e equipamentos em NF-e
+// prazo médio de recebimento (vencimento − emissão) ponderado pelo valor do documento
+function prazo(rows){const m=new Map();rows.forEach(r=>{let d=m.get(r.nfk);if(!d)m.set(r.nfk,d={p:r.prazo,v:0});d.v+=r.total});
+  let w=0,s=0,sem=0,nSem=0;m.forEach(d=>{if(d.p==null){sem+=d.v;nSem++}else{w+=d.v;s+=d.v*d.p}});return {dias:w?s/w:null,semVenc:sem,nSem}}
+// desempenho por vendedor (base: faturamento líquido)
+function vendStats(R){const fr=remMode(R)?R:fatRows(R),EQ=eqCat(),tot=sumBy(fr,'total'),m=new Map();
+  for(const r of fr){const k=r.vend||'—';let g=m.get(k);
+    if(!g)m.set(k,g={k,label:vendName(k),house:isHouse(k),emps:new Set(),docs:new Set(),cli:new Set(),itens:0,qtd:0,totProd:0,desc:0,total:0,loc:0,ins:0,sc:0});
+    const c=catOf(r,EQ);g.emps.add(r.emp);g.docs.add(r.nfk);g.cli.add(r.cnpj);g.itens++;g.qtd+=r.qtd;g.totProd+=r.totProd;g.desc+=r.desc;g.total+=r.total;if(c in g)g[c]+=r.total}
+  return [...m.values()].map(g=>({...g,notas:g.docs.size,clientes:g.cli.size,ticket:g.docs.size?g.total/g.docs.size:0,pDesc:g.totProd?g.desc/g.totProd:0,share:tot?g.total/tot:0}))
+    .sort((a,b)=>(a.k==='—')-(b.k==='—')||b.total-a.total)}
+const vendTipo=v=>v.k==='—'?'Sem vendedor':v.house?'Venda direta (empresa)':'Vendedor / representante';
+// um registro por documento (NF-e ou recibo), reunindo os itens
+function docsOf(rows){const m=new Map(),EQ=eqCat();
+  for(const r of rows){let d=m.get(r.nfk);
+    if(!d)m.set(r.nfk,d={nfk:r.nfk,emp:r.emp,tipo:r.tipo,nf:r.nf,data:r.data,dia:r.dia,venc:r.venc,prazo:r.prazo,status:r.status,cliente:r.cliente,fantasia:r.fantasia,cnpj:r.cnpj,cidade:r.cidade,uf:r.uf,inter:r.inter,
+      prodS:new Set(),loteS:new Set(),linS:new Set(),vends:new Set(),utils:new Set(),cfops:new Set(),recs:new Set(),conds:new Set(),obsS:new Set(),cats:new Set(),itens:0,qtd:0,totProd:0,desc:0,descTab:0,frete:0,icms:0,ipi:0,total:0});
+    d.vends.add(r.vendLabel);d.prodS.add(r.produto);if(r.lote)d.loteS.add(r.lote);d.linS.add(r.linha);d.utils.add(r.util);if(r.cfop)d.cfops.add(r.cfop);d.recs.add(r.rec);if(r.condRec)d.conds.add(r.condRec);if(r.obs)d.obsS.add(r.obs);d.cats.add(catOf(r,EQ));
+    d.itens++;d.qtd+=r.qtd;d.totProd+=r.totProd;d.desc+=r.desc;d.descTab+=r.descTab||0;d.frete+=r.frete;d.icms+=r.icms||0;d.ipi+=r.ipi||0;d.total+=r.total}
+  return [...m.values()].map(d=>({...d,produto:[...d.prodS].join(' | '),lote:[...d.loteS].join(', '),linha:[...d.linS].join(', '),vend:[...d.vends].join(', '),util:[...d.utils].join(', '),cfop:[...d.cfops].join(', '),rec:[...d.recs].join(', '),condRec:[...d.conds].join(', '),obs:[...d.obsS].join('\n\n'),
+    cat:[...d.cats].map(c=>CAT_LABEL[c]).join(' + '),fat:[...d.cats].some(c=>FAT_CATS.has(c))}))}
+// insights automáticos (obedecem aos filtros)
+function insights(R){
+  const out=[];if(!R.length)return out;
+  const fr=fatRows(R),F=sumBy(fr,'total'),EQ=eqCat(),P=v=>(F?v/F*100:0).toFixed(1).replace('.',',')+'%',nd=a=>new Set(a.map(r=>r.nfk)).size;
+  const cli=group(fr,'cnpj',r=>r.cliente);
+  if(cli.length>1){const t5=cli.slice(0,5).reduce((a,g)=>a+g.total,0);out.push({tone:t5/F>.5?'warn':'info',title:'Concentração de clientes',text:`Os ${Math.min(5,cli.length)} maiores clientes somam <b>${P(t5)}</b> do faturamento; o maior, <b>${esc(cli[0].label)}</b>, responde por ${P(cli[0].total)} (${BRL.format(cli[0].total)}).`})}
+  const vs=vendStats(R).filter(v=>v.k!=='—');
+  if(vs.length){const v=vs[0],hs=vs.filter(x=>x.house).reduce((a,x)=>a+x.total,0),rep=vs.filter(x=>!x.house),sv=vendStats(R).find(x=>x.k==='—');
+    out.push({tone:'good',title:'Vendedores',text:`<b>${esc(v.label)}</b> lidera com ${BRL.format(v.total)} (${P(v.total)}) em ${v.notas} documento(s) e ${v.clientes} cliente(s).${rep.length?` ${rep.length} vendedor(es)/representante(s) externos somam ${P(rep.reduce((a,x)=>a+x.total,0))}.`:''}${hs?` Venda direta da empresa: ${P(hs)}.`:''}${sv?` Sem vendedor informado: ${P(sv.total)}.`:''}`});
+    const vd=vs.filter(x=>x.totProd>0&&x.total>=F*0.02).sort((a,b)=>b.pDesc-a.pDesc)[0],t=totals(fr.filter(r=>!isLoc(r)));
+    if(t.desc>0.5)out.push({tone:'warn',title:'Descontos sobre o preço de tabela',text:`Nas vendas, o desconto médio é de <b>${(t.pDesc*100).toFixed(1).replace('.',',')}%</b> (${BRL.format(t.desc)} sobre ${BRL.format(t.totProd)} em preço de tabela).${vd&&vd.pDesc>0?` Maior taxa entre os vendedores relevantes: <b>${esc(vd.label)}</b> (${(vd.pDesc*100).toFixed(1).replace('.',',')}%).`:''}`})}
+  const sc=fr.filter(r=>catOf(r,EQ)==='sc');
+  if(sc.length){const g=group(sc,'cnpj',r=>r.cliente),v=sumBy(sc,'total');out.push({tone:'info',title:'Vendas sem cobrança a faturar',text:`<b>${BRL.format(v)}</b> (${P(v)} do faturamento) em ${nd(sc)} NF-e para ${g.length} cliente(s), a consolidar em <b>fatura e boleto únicos</b>. Maior saldo: <b>${esc(g[0].label)}</b> (${BRL.format(g[0].total)}).`})}
+  const loc=fr.filter(isLoc);
+  if(loc.length){out.push({tone:'good',title:'Receita recorrente (locação)',text:`Locações respondem por <b>${P(sumBy(loc,'total'))}</b> do faturamento (${BRL.format(sumBy(loc,'total'))} em ${nd(loc)} recibo(s)).`});
+    const lc=new Set(loc.map(r=>r.cnpj)),bc=new Set(fr.filter(r=>!isLoc(r)).map(r=>r.cnpj)),only=[...lc].filter(c=>!bc.has(c));
+    if(only.length)out.push({tone:'info',title:'Oportunidade em insumos',text:`<b>${only.length}</b> de ${lc.size} cliente(s) com equipamento locado não compraram insumos no período (${BRL.format(sumBy(loc.filter(r=>only.includes(r.cnpj)),'total'))} em locações).`})}
+  const pz=prazo(fr),rec=group(fr,'rec');
+  if(pz.dias!=null)out.push({tone:'info',title:'Recebimento',text:`Prazo médio ponderado de <b>${Math.round(pz.dias)} dias</b> entre emissão e vencimento. Forma predominante: <b>${esc(rec[0].k)}</b> (${P(rec[0].total)}).${pz.semVenc?` ${BRL.format(pz.semVenc)} ainda sem vencimento (fatura posterior).`:''}`});
+  const ln=group(fr.filter(r=>!isLoc(r)),'linha');
+  if(ln.length)out.push({tone:'info',title:'Linha de atuação líder em insumos',text:`<b>${esc(ln[0].k)}</b> soma ${BRL.format(ln[0].total)} (${P(ln[0].total)} do faturamento)${ln[1]?`, seguida de ${esc(ln[1].k)} (${P(ln[1].total)})`:''}.`});
+  const d=group(fr,'dia');
+  if(d.length>1)out.push({tone:'info',title:'Dia de pico',text:`${isoBR(d[0].k)} concentrou ${BRL.format(d[0].total)} (${P(d[0].total)}) em ${d[0].notas} documento(s).`});
+  const eq=R.filter(r=>catOf(r,EQ)==='eq');
+  if(eq.length)out.push({tone:'warn',title:'Equipamentos remetidos em NF-e',text:`${BRL.format(sumBy(eq,'total'))} em ${nd(eq)} NF-e (comodato, remessa para locação, ativo imobilizado ou demonstração) — fora do faturamento.`});
+  const inter=R.filter(r=>r.inter);
+  if(inter.length)out.push({tone:'warn',title:'Operações intragrupo',text:`${BRL.format(sumBy(inter,'total'))} em ${nd(inter)} documento(s) entre empresas do grupo — já incluídos nos totais; elimine na consolidação.`});
+  return out}
+const stripTags=s=>String(s).replace(/<[^>]+>/g,'');
+function vencRows(rows){const m=new Map();docsOf(fatRows(rows)).forEach(d=>{const k=d.venc?localISO(d.venc):'';let g=m.get(k);
+  if(!g)m.set(k,g={k,venc:d.venc,docs:0,cli:new Set(),recs:new Set(),total:0});g.docs++;g.cli.add(d.cnpj);d.recs.forEach(x=>g.recs.add(x));g.total+=d.total});
+  return [...m.values()].map(g=>({...g,clientes:g.cli.size,formas:[...g.recs].join(', '),label:g.venc?fmtD(g.venc):'Fatura posterior (sem vencimento)'})).sort((a,b)=>(a.venc?0:1)-(b.venc?0:1)||a.venc-b.venc)}
+function vencWeeks(rows){const m=new Map();vencRows(rows).forEach(g=>{let k='~',l='Fatura posterior (vendas sem cobrança)';
+  if(g.venc){const x=new Date(g.venc);x.setDate(x.getDate()-((x.getDay()+6)%7));k=localISO(x);const y=new Date(x);y.setDate(y.getDate()+6);l=fmtD(x)+' a '+fmtD(y)}
+  let w=m.get(k);if(!w)m.set(k,w={k,label:l,docs:0,total:0});w.docs+=g.docs;w.total+=g.total});return [...m.values()].sort((a,b)=>a.k.localeCompare(b.k))}
+function fatur(rows){ // recebíveis: locações + insumos de NF-e de venda + vendas sem cobrança (fatura/boleto posterior); o $Total já embute o frete; exclui brindes e equipamentos em NF-e
   const b=fatRows(rows);
   return {total:b.reduce((a,r)=>a+r.total,0),frete:b.reduce((a,r)=>a+r.frete,0)};
 }
@@ -718,30 +889,30 @@ function totals(rows){
 
 /* ---------- Render ---------- */
 function kpiSet(R){
-  const t=totals(cardRows(R)),f=fatur(R),nfs=a=>new Set(a.map(r=>r.nfk)).size;
-  // Locações, insumos (NF-e de venda) e equipamentos emitidos em NF-e (e não em fatura/recibo de locação)
+  const t=totals(cardRows(R)),f=fatur(R),nfs=a=>new Set(a.map(r=>r.nfk)).size,EQ=eqCat(),cm=new Map(R.map(r=>[r,catOf(r,EQ)])),of=k=>R.filter(r=>cm.get(r)===k);
   const locAll=R.filter(isLoc),locTot=sumBy(locAll,'total'),locQtd=sumBy(locAll,'qtd'),locNf=nfs(locAll);
-  const eqNames=new Set(ALL.filter(isLoc).map(r=>norm(r.produto))),isEq=r=>eqNames.has(norm(r.produto));
-  const insR=R.filter(r=>isNFe0(r)&&!isLoc(r)&&!isEq(r)&&norm(r.util)==='venda'),insTot=sumBy(insR,'total');
-  const scR=R.filter(r=>isNFe0(r)&&!isLoc(r)&&!isEq(r)&&isSC(r)),scTot=sumBy(scR,'total'),scFrete=sumBy(R.filter(isSC),'frete');
-  const eqR=R.filter(r=>isEqNF(r,eqNames)),eqTot=sumBy(eqR,'total');
-  const brR=R.filter(r=>isBr(r)&&!isEqNF(r,eqNames)),brTot=sumBy(brR,'total'),brFrete=sumBy(brR,'frete');
+  const insR=of('ins'),insTot=sumBy(insR,'total'),scR=of('sc'),scTot=sumBy(scR,'total'),scFrete=sumBy(scR,'frete'),scCli=new Set(scR.map(r=>r.cnpj)).size;
+  const eqR=of('eq'),eqTot=sumBy(eqR,'total'),brR=of('br'),brTot=sumBy(brR,'total'),brFrete=sumBy(brR,'frete');
+  const fr=fatRows(R),docs=nfs(fr),tick=docs?f.total/docs:0,vs=vendStats(R),vAct=vs.filter(v=>v.k!=='—'),pz=prazo(fr),icms=sumBy(R,'icms'),descTab=sumBy(cardRows(R),'descTab');
+  const pc=v=>(f.total?v/f.total*100:0).toFixed(1).replace('.',',')+'%';
   const K=[
-    ['hero',fatLabel(R),BRL.format(f.total),remMode(R)?'Visão isolada — não são recebíveis':`Locações + insumos + frete (${BRL.format(sumBy([...locAll,...insR],'frete'))}, já incluso no total das notas)`],
-    ['var(--violet)','Total em produtos',BRL.format(t.totProd),'Valor bruto antes de descontos'],
-    ['var(--rose)','Descontos concedidos',BRL.format(t.desc),`${(t.pDesc*100).toFixed(1)}% do valor bruto`],
-    ['var(--amber)','Volume de locações',BRL.format(locTot),locAll.length?`${NUM.format(locQtd)} un locadas · ${locNf} recibos/notas`:'Sem locações no filtro'],
+    ['hero',fatLabel(R),BRL.format(f.total),remMode(R)?'Visão isolada — não são recebíveis':`Locações + insumos + vendas sem cobrança · frete incluso (${BRL.format(f.frete)})`],
+    ['var(--amber)','Volume de locações',BRL.format(locTot),locAll.length?`${pc(locTot)} do faturamento · ${locNf} recibo(s)`:'Sem locações no filtro'],
+    ['var(--teal-2)','Insumos (NF-e com cobrança)',BRL.format(insTot),insR.length?`${pc(insTot)} do faturamento · ${nfs(insR)} NF-e de venda`:'Sem vendas com cobrança no filtro'],
+    ['var(--violet)','Vendas sem cobrança',BRL.format(scTot),scR.length?`${pc(scTot)} · ${nfs(scR)} NF-e · ${scCli} cliente(s) · <b>a faturar em fatura + boleto únicos</b>`:'Sem vendas sem cobrança no filtro'],
+    ['var(--violet)','Total em produtos (tabela)',BRL.format(t.totProd),'Quantidade × preço unitário, antes de descontos'],
+    ['var(--rose)','Descontos concedidos',BRL.format(t.desc),`${(t.pDesc*100).toFixed(1).replace('.',',')}% do valor bruto${descTab&&Math.abs(descTab-t.desc)>0.01?` · ${BRL.format(descTab)} sobre o preço de tabela`:descTab?' · diferença entre preço de tabela e valor faturado':''}`],
+    ['var(--navy-2)','Documentos / Ticket médio',`${NUM.format(docs)} / ${BRL.format(tick)}`,`NF-e e recibos faturáveis · ${NUM.format(t.itens)} itens · ${NUM.format(t.qtd)} un`],
     ['var(--teal)','Clientes atendidos',NUM.format(t.clientes),`${NUM.format(t.produtos)} produtos distintos`],
-    ['var(--green)','Itens / Quantidade',`${NUM.format(t.itens)} / ${NUM.format(t.qtd)}`,`${t.bonif} itens com valor zero (bonificação)`],
-    ['var(--navy-2)','Frete',BRL.format(f.frete),`<b class="sc-note">Frete sem cobrança: ${BRL.format(scFrete)}</b> (fora do total) · ST/IPI: ${BRL.format(t.imp)}`],
-    ['var(--teal-2)','Insumos comercializados',BRL.format(insTot),`${nfs(insR)} NF-e de venda · exclui vendas sem cobrança`],
-    ['var(--rose)','Remessas sem cobrança',BRL.format(scTot),scR.length?`${nfs(scR)} NF-e · ${NUM.format(sumBy(scR,'qtd'))} un · <b class="sc-note">frete: ${BRL.format(scFrete)}</b>`:'Sem remessas sem cobrança no filtro'],
+    ['var(--green)','Vendedores ativos',NUM.format(vAct.length),(()=>{const ex=vAct.filter(v=>!v.house),hs=vAct.filter(v=>v.house).reduce((a,v)=>a+v.total,0);return ex[0]?`Líder externo: ${esc(ex[0].label)} (${pc(ex[0].total)})${hs?` · venda direta ${pc(hs)}`:''}`:vAct[0]?`Líder: ${esc(vAct[0].label)} (${pc(vAct[0].total)})`:'Sem vendedor informado no filtro'})()],
+    ['var(--amber)','Prazo médio de recebimento',pz.dias!=null?`${NUM.format(Math.round(pz.dias))} dias`:'—',`Ponderado pelo valor${pz.semVenc?` · ${BRL.format(pz.semVenc)} sem vencimento (fatura posterior)`:''}`],
+    ['var(--navy-2)','Frete',BRL.format(f.frete),`Incluso no faturamento · ICMS destacado ${BRL.format(icms)}${t.imp?' · ST/IPI '+BRL.format(t.imp):''}`],
     ['var(--amber)','Brindes / Bonificações',BRL.format(brTot),brR.length?`${nfs(brR)} NF-e · ${NUM.format(sumBy(brR,'qtd'))} un${brFrete>0?` · frete: ${BRL.format(brFrete)}`:''} · fora do faturamento`:'Sem brindes/bonificações no filtro'],
-    ['var(--violet)','Equipamentos em NF-e',BRL.format(eqTot),eqR.length?`${nfs(eqR)} NF-e · ${NUM.format(sumBy(eqR,'qtd'))} un · remessas em comodato (CFOP 5908) e equipamentos em NF-e`:'Nenhum equipamento emitido em NF-e no filtro'],
+    ['var(--violet)','Equipamentos em NF-e',BRL.format(eqTot),eqR.length?`${nfs(eqR)} NF-e · ${NUM.format(sumBy(eqR,'qtd'))} un · comodato, remessa p/ locação, ativo e demonstração · fora do faturamento`:'Nenhum equipamento emitido em NF-e no filtro'],
   ];
   const inter=R.filter(r=>r.inter);
-  if(inter.length)K.push(['var(--amber)','Operações intragrupo',BRL.format(sumBy(inter,'total')),`${nfs(inter)} nota(s) entre empresas do grupo · já incluídas nos totais acima`]);
-  return {t,f,locAll,locTot,locQtd,locNf,insR,insTot,scR,scTot,scFrete,eqR,eqTot,brR,brTot,inter,K};
+  if(inter.length)K.push(['var(--amber)','Operações intragrupo',BRL.format(sumBy(inter,'total')),`${nfs(inter)} documento(s) entre empresas do grupo · já incluídas nos totais acima`]);
+  return {t,f,locAll,locTot,locQtd,locNf,insR,insTot,scR,scTot,scFrete,scCli,eqR,eqTot,brR,brTot,inter,K,docs,tick,vs,vAct,pz,icms};
 }
 function concilHtml(R){
   const cc=concil(R),EL=empsIn(R),multi=EL.length>1,per=EL.map(e=>concil(byEmp(R,e.emp)));
@@ -764,13 +935,13 @@ function empSections(){
     const cards=[
       [fatLabel(R),BRL.format(k.f.total),multi?`${(share*100).toFixed(1)}% do faturamento do grupo<div class="emp-share"><i style="width:${(share*100).toFixed(1)}%"></i></div>`:'Locações + insumos + frete',1],
       ['Locações',BRL.format(k.locTot),k.locAll.length?`${NUM.format(k.locQtd)} un · ${k.locNf} recibos/notas`:'Sem locações no filtro'],
-      ['Insumos (NF-e de venda)',BRL.format(k.insTot),k.insR.length?`${nfs(k.insR)} NF-e de venda`:'Sem vendas de insumos'],
-      ['Fora do faturamento',BRL.format(fora),`Remessas ${BRL.format(k.scTot)} · Brindes ${BRL.format(k.brTot)} · Equip. ${BRL.format(k.eqTot)}`],
-      ['Total geral das notas',BRL.format(cc.tot),`${NUM.format(R.length)} itens · descontos ${BRL.format(k.t.desc)}`],
-      ['Notas / Clientes',`${NUM.format(k.t.notas)} / ${NUM.format(k.t.clientes)}`,`${NUM.format(k.t.produtos)} produtos distintos`]];
-    const cl=group(fr,'cnpj',r=>r.cliente).slice(0,5),pr=group(fr,r=>r.codProd||r.produto,r=>r.produto).slice(0,5);
+      ['Insumos (NF-e de venda)',BRL.format(k.insTot),k.insR.length?`${nfs(k.insR)} NF-e de venda com cobrança`:'Sem vendas de insumos'],
+      ['Vendas sem cobrança',BRL.format(k.scTot),k.scR.length?`${nfs(k.scR)} NF-e · ${k.scCli} cliente(s) · a faturar`:'Sem vendas sem cobrança'],
+      ['Fora do faturamento',BRL.format(fora),`Brindes ${BRL.format(k.brTot)} · Equip. ${BRL.format(k.eqTot)} · total das notas ${BRL.format(cc.tot)}`],
+      ['Documentos / Clientes',`${NUM.format(k.docs)} / ${NUM.format(k.t.clientes)}`,`Ticket médio ${BRL.format(k.tick)} · ${k.vAct.length} vendedor(es)${k.pz.dias!=null?' · prazo '+Math.round(k.pz.dias)+' d':''}`]];
+    const cl=group(fr,'cnpj',r=>r.cliente).slice(0,5),pr=group(fr.filter(r=>r.codProd||!isLoc(r)),r=>r.codProd||r.produto,r=>r.produto).slice(0,5);
     return `<section class="emp-sec" style="--ec:${c}">${hd}<div class="emp-k">${cards.map(([l,v,s,h])=>`<div class="${h?'h':''}"><div class="l">${esc(l)}</div><div class="v" title="${esc(v)}">${v}</div><div class="s">${s}</div></div>`).join('')}</div>
-      <div class="emp-cols"><div><h5>Top 5 clientes</h5><ul class="rank">${rankHtml(cl,k.f.total)}</ul></div><div><h5>Top 5 produtos</h5><ul class="rank">${rankHtml(pr,k.f.total)}</ul></div></div>
+      <div class="emp-cols"><div><h5>Top 5 clientes</h5><ul class="rank">${rankHtml(cl,k.f.total)}</ul></div><div><h5>Top 5 produtos</h5><ul class="rank">${rankHtml(pr,k.f.total)}</ul></div><div><h5>Top 5 vendedores</h5><ul class="rank">${rankHtml(k.vs.slice(0,5),k.f.total,v=>`${v.notas} doc · ${v.clientes} cli`)}</ul></div></div>
       ${k.inter.length?`<p class="emp-note">Inclui <b>${BRL.format(sumBy(k.inter,'total'))}</b> em ${nfs(k.inter)} nota(s) emitida(s) para outra empresa do grupo (operações intragrupo) — considere ao consolidar.</p>`:''}</section>`;
   });
   box.innerHTML=`<h3>Visão por empresa <small>${active.length} de ${EMPS.length} empresa(s) com movimentações no filtro</small></h3><div class="emp-grid">${secs.join('')}</div>`;
@@ -780,6 +951,8 @@ function render(){
   $('meta').innerHTML=EMPS.map(e=>`<span class="chip" style="border-left:3px solid ${empColor(e.emp)}">${esc(e.emp)} · relatório: <b>${perRel(e)}</b>${e.emitido?' · '+esc(e.emitido):''}</span>`).join('')+`<span class="chip">Arquivo: <b>${esc(META.arquivo)}</b></span>`;
   $('kpis').innerHTML=k.K.map(([c,l,v,s])=>`<div class="kpi ${c==='hero'?'hero':''}" style="--c:${c}"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join('');
   empSections();
+  const ins=insights(VIEW);
+  $('insBox').innerHTML=ins.length?`<h3>Insights do período <small>gerados automaticamente a partir dos filtros aplicados</small></h3><ul class="ins">${ins.map(i=>`<li class="${i.tone}"><b>${esc(i.title)}</b><span>${i.text}</span></li>`).join('')}</ul>`:'';
   $('concilBox').innerHTML=concilHtml(VIEW);
 
   const fr=fatRows(VIEW),EL=empsIn(fr),multi=EL.length>1;
@@ -791,14 +964,28 @@ function render(){
     {type:'line',label:'Desconto',data:dias.map(d=>d.desc),borderColor:'#e2566b',backgroundColor:'#e2566b',tension:.35,yAxisID:'y',pointRadius:3,stack:'desc'},...bars]},{money:true,stacked:multi});
   const ufs=group(fr,'uf');
   chart('chUf','doughnut',{labels:ufs.map(u=>u.k),datasets:[{data:ufs.map(u=>u.total),backgroundColor:PAL,borderWidth:2}]},{money:true,legend:true});
-  const locR=VIEW.filter(isLoc),loc=group(locR,r=>r.codProd||r.produto,r=>r.produto).slice(0,12);
+  const locR=VIEW.filter(isLoc),locCli=locR.length&&locR.every(r=>!r.codProd),loc=(locCli?group(locR,'cnpj',r=>r.cliente):group(locR,r=>r.codProd||r.produto,r=>r.produto)).slice(0,12);
+  $('locTitle').textContent=locCli?'Locações por cliente':'Locações por equipamento';
   const linhas=group(fr,'linha').slice(0,15);$('linhaInfo').textContent=`${linhas.length} categorias`;chart('chLinha','bar',{labels:linhas.map(v=>v.k),datasets:[{label:'Faturamento',data:linhas.map(v=>v.total),backgroundColor:'#7c5cff',borderRadius:6}]},{money:true,horiz:true});
-  $('locInfo').textContent=locR.length?`${NUM.format(sumBy(locR,'qtd'))} un · ${BRL.format(sumBy(locR,'total'))}`:'Sem locações no filtro';
+  $('locInfo').textContent=locR.length?`${locCli?new Set(locR.map(r=>r.nfk)).size+' recibo(s)':NUM.format(sumBy(locR,'qtd'))+' un'} · ${BRL.format(sumBy(locR,'total'))}`:'Sem locações no filtro';
   chart('chLoc','bar',{labels:loc.map(v=>v.label),datasets:[{label:'Locação',data:loc.map(v=>v.total),backgroundColor:'#123a5e',borderRadius:6}]},{money:true,horiz:true});
   const cid=group(fr,r=>r.cidade+'/'+r.uf).slice(0,10);
   chart('chCid','bar',{labels:cid.map(v=>v.k),datasets:[{label:'Faturamento',data:cid.map(v=>v.total),backgroundColor:'#14c2b4',borderRadius:6}]},{money:true,horiz:true});
   rank('rkCli',group(fr,'cnpj',r=>r.cliente).slice(0,10),k.f.total);
-  rank('rkProd',group(fr,r=>r.codProd||r.produto,r=>r.produto).slice(0,10),k.f.total);
+  // vendedores
+  const EQ=eqCat(),vtop=k.vs.slice(0,12),vc=[['loc','Locação','#123a5e'],['ins','Insumos','#0fa3a3'],['sc','Vendas sem cobrança','#7c5cff']];
+  chart('chVend','bar',{labels:vtop.map(v=>v.label),datasets:vc.map(([c,l,col])=>({label:l,data:vtop.map(v=>v[c]),backgroundColor:col,borderRadius:4}))},{money:true,horiz:true,stacked:true});
+  $('vendInfo').textContent=`${k.vAct.length} vendedor(es) ativo(s) · clique em uma linha para filtrar`;
+  $('vendTbody').innerHTML=k.vs.map((v,i)=>`<tr class="clk" data-v="${esc(v.k)}" tabindex="0" title="Filtrar por ${esc(v.label)}"><td>${i+1}</td><td class="text-cell"><b>${esc(v.label)}</b> <span class="util-tag${v.house?' house':v.k==='—'?' none':''}">${vendTipo(v)}</span></td><td>${[...v.emps].map(e=>`<span class="emp-tag" style="--ec:${empColor(e)}">${esc(e)}</span>`).join(' ')}</td><td class="r"><b>${BRL.format(v.total)}</b><div class="vbar"><i style="width:${(v.share*100).toFixed(1)}%"></i></div></td><td class="r">${(v.share*100).toFixed(1)}%</td><td class="r">${NUM.format(v.notas)}</td><td class="r">${NUM.format(v.clientes)}</td><td class="r">${BRL.format(v.ticket)}</td><td class="r">${BRL.format(v.loc)}</td><td class="r">${BRL.format(v.ins)}</td><td class="r">${BRL.format(v.sc)}</td><td class="r">${BRL.format(v.desc)}</td><td class="r">${(v.pDesc*100).toFixed(1)}%</td></tr>`).join('')||'<tr><td colspan="13">Sem dados</td></tr>';
+  // vencimentos (por semana) e forma de recebimento
+  const wk=d=>{const x=new Date(d);x.setDate(x.getDate()-((x.getDay()+6)%7));return localISO(x)};
+  const dv=docsOf(fr),vg=new Map();let semV=0;dv.forEach(d=>{if(!d.venc){semV+=d.total;return}const w=wk(d.venc);vg.set(w,(vg.get(w)||0)+d.total)});
+  const vk=[...vg.keys()].sort();
+  chart('chVenc','bar',{labels:[...vk.map(w=>'sem. '+isoBR(w).slice(0,5)),...(semV?['Fatura posterior']:[])],datasets:[{label:'A receber',data:[...vk.map(w=>vg.get(w)),...(semV?[semV]:[])],backgroundColor:[...vk.map(()=>'#0fa3a3'),...(semV?['#7c5cff']:[])],borderRadius:6}]},{money:true});
+  $('vencInfo').textContent=`${dv.filter(d=>d.venc).length} documento(s) com vencimento · semanas iniciadas na segunda-feira${semV?' · vendas sem cobrança em barra própria':''}`;
+  const rg=group(fr,'rec');
+  chart('chRec','doughnut',{labels:rg.map(u=>u.k),datasets:[{data:rg.map(u=>u.total),backgroundColor:PAL,borderWidth:2}]},{money:true,legend:true});
+  rank('rkProd',group(fr.filter(r=>r.codProd||!isLoc(r)),r=>r.codProd||r.produto,r=>r.produto).slice(0,10),k.f.total);
   table();renderClass();
 }
 /* ---------- Painel de revisão das linhas de atuação (busca em tempo real + ajustes persistentes) ---------- */
@@ -966,22 +1153,214 @@ function chart(id,type,data,o={}){
 }
 const abbr=v=>v>=1e6?'R$ '+(v/1e6).toFixed(1)+'M':v>=1e3?'R$ '+(v/1e3).toFixed(0)+'k':'R$ '+v;
 function rank(id,list,tot){$(id).innerHTML=rankHtml(list,tot)}
-function rankHtml(list,tot){const max=list[0]?.total||1;
-  return list.map((g,i)=>`<li><span class="n">${i+1}</span><div style="min-width:0"><div class="nm" title="${esc(g.label)}">${esc(g.label)}</div><div class="bar"><i style="width:${g.total/max*100}%"></i></div></div><div style="text-align:right"><div class="val">${BRL.format(g.total)}</div><div style="font-size:11px;color:var(--muted)">${(g.total/(tot||1)*100).toFixed(1)}% · ${NUM.format(g.qtd)} un</div></div></li>`).join('')||'<li>Sem dados</li>'}
+function rankHtml(list,tot,sub){const max=Math.max(...list.map(g=>g.total),0)||1;
+  return list.map((g,i)=>`<li><span class="n">${i+1}</span><div style="min-width:0"><div class="nm" title="${esc(g.label)}">${esc(g.label)}</div><div class="bar"><i style="width:${Math.max(0,g.total/max*100)}%"></i></div></div><div style="text-align:right"><div class="val">${BRL.format(g.total)}</div><div style="font-size:11px;color:var(--muted)">${(g.total/(tot||1)*100).toFixed(1)}% · ${sub?sub(g):NUM.format(g.qtd)+' un'}</div></div></li>`).join('')||'<li>Sem dados</li>'}
 
-const COLS=[['data','Data'],['emp','Empresa'],['nf','NF'],['cliente','Cliente'],['uf','UF'],['cidade','Cidade'],['vend','Vend.'],['cfop','CFOP'],['util','Utilização / Tipo de remessa'],['linha','Linha de atuação'],['produto','Produto'],['qtd','Qtd',1],['preco','Preço',1],['totProd','T. Prod.',1],['desc','Desconto',1],['frete','Frete',1],['total','Total',1]];
+const COLS=[['data','Emissão'],['venc','Vencimento'],['emp','Empresa'],['tipo','Doc.'],['nf','Número'],['cliente','Cliente'],['uf','UF'],['cidade','Cidade'],['vend','Vendedor'],['cfop','CFOP'],['util','Utilização / Tipo de remessa'],['rec','Recebimento'],['linha','Linha de atuação'],['produto','Produto'],['lote','Lote'],['qtd','Qtd',1],['preco','Preço',1],['totProd','T. Prod.',1],['desc','Desconto',1],['frete','Frete',1],['total','Total',1]];
+const DCOLS=[['data','Emissão'],['venc','Vencimento'],['emp','Empresa'],['tipo','Doc.'],['nf','Número'],['cliente','Cliente'],['uf','UF'],['vend','Vendedor'],['util','Utilização'],['rec','Recebimento'],['condRec','Condição'],['status','Status'],['itens','Itens',1],['qtd','Qtd',1],['totProd','T. Prod.',1],['desc','Desconto',1],['frete','Frete',1],['total','Total',1],['obs','Observação']];
+let tblMode='itens',DOC_NAV=[],DOCIDX=new Map();
+const fmtDT=d=>d instanceof Date?(d.getHours()||d.getMinutes()?fmtD(d)+' '+d.toTimeString().slice(0,5):fmtD(d)):'—';
+function cellHtml(r,k,n){
+  let v=r[k];
+  if(k==='data'||k==='venc')v=fmtDT(v);
+  else if(k==='util')v=`<span class="util-tag">${esc(v)}</span>`;
+  else if(k==='emp')v=`<span class="emp-tag" style="--ec:${empColor(r.emp)}">${esc(r.emp)}</span>`+(r.inter?' <span class="util-tag" title="Documento emitido para outra empresa do grupo">intragrupo</span>':'');
+  else if(k==='tipo')v=`<span class="doc-tag ${r.tipo==='Recibo'?'rec':''}">${esc(v)}</span>`;
+  else if(k==='linha')v=`<span class="line-tag${r.inferido?' inf':''}" title="${esc(r.fonte)} · confiança ${esc(r.confianca)}">${esc(v)}</span>`;
+  else if(k==='vend')v=esc(r.vendLabel||vendName(r.vend));
+  else if(k==='total')v=`<span class="tag ${v===0?'zero':''}">${BRL.format(v)}</span>`;
+  else if(k==='qtd'||k==='itens')v=NUM.format(v);
+  else if(n)v=BRL.format(v||0);
+  else if(k==='obs')v=esc(String(v||'').replace(/\s+/g,' '));
+  else v=esc(v);
+  const tc=['cliente','produto','vend','obs','util'].includes(k);
+  return `<td class="${n?'r':tc?'text-cell':''}${k==='obs'?' obs-cell':''}" ${tc?`title="${esc(k==='vend'?(r.vendLabel||r.vend):r[k])}"`:k==='cfop'&&CFOP_DESC[cfopDigits(r)]?`title="${esc(CFOP_DESC[cfopDigits(r)])}"`:''}>${v}</td>`}
+// ---- filtro inteligente (consulta + atalhos) ----
+const TF={q:'',tipo:'',sit:'',venc:'',status:''};let LAST_TBL=null;
+const TF_FIELDS={cli:'cliente',cliente:'cliente',fantasia:'fantasia',nf:'nf',num:'nf',numero:'nf',doc:'tipo',tipo:'tipo',vend:'vend',vendedor:'vend',prod:'produto',produto:'produto',uf:'uf',cid:'cidade',cidade:'cidade',lote:'lote',serial:'serial',obs:'obs',util:'util',linha:'linha',rec:'rec',receb:'rec',cfop:'cfop',emp:'emp',empresa:'emp',status:'status',cnpj:'cnpj'};
+const TF_NAMES={cliente:'cliente',fantasia:'nome fantasia',nf:'número',tipo:'documento',vend:'vendedor',produto:'produto',uf:'UF',cidade:'cidade',lote:'lote',serial:'serial',obs:'observação',util:'utilização',linha:'linha',rec:'recebimento',cfop:'CFOP',emp:'empresa',status:'status',cnpj:'CNPJ'};
+const pnum=s=>{s=String(s).trim();if(s.includes(','))return +s.replace(/\./g,'').replace(',','.');if(/^\d{1,3}(\.\d{3})+$/.test(s))return +s.replace(/\./g,'');return +s};
+function parseQ(q){const out=[];const toks=String(q||'').match(/-?(?:[\wÀ-ÿ]+:)?"[^"]*"|\S+/g)||[];
+  for(let t of toks){let neg=false;if(t.length>1&&t[0]==='-'){neg=true;t=t.slice(1)}let m;
+    if((m=t.match(/^(>=|<=|>|<)([\d.,]+)$/))&&!isNaN(pnum(m[2]))){out.push({k:'cmp',op:m[1],v:pnum(m[2]),neg,lab:`valor ${m[1]} ${BRL.format(pnum(m[2]))}`});continue}
+    if((m=t.match(/^([\d.,]+)\.\.([\d.,]+)$/))){const a=pnum(m[1]),b=pnum(m[2]);out.push({k:'rng',a:Math.min(a,b),b:Math.max(a,b),neg,lab:`valor entre ${BRL.format(Math.min(a,b))} e ${BRL.format(Math.max(a,b))}`});continue}
+    if((m=t.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/))&&+m[2]<=12){const md=String(m[2]).padStart(2,'0')+'-'+String(m[1]).padStart(2,'0'),y=m[3]?(m[3].length===2?'20'+m[3]:m[3]):'';out.push({k:'dt',md,y,neg,lab:`emissão ${m[1].padStart(2,'0')}/${m[2].padStart(2,'0')}${y?'/'+y:''}`});continue}
+    if((m=t.match(/^([\wÀ-ÿ]+):(.+)$/))&&TF_FIELDS[norm(m[1])]){const f=TF_FIELDS[norm(m[1])],v=norm(m[2].replace(/^"|"$/g,'')).trim();if(v)out.push({k:'fld',f,v,neg,lab:`${TF_NAMES[f]} contém “${v}”`});continue}
+    const v=norm(t.replace(/^"|"$/g,'')).trim();if(v)out.push({k:'txt',v,neg,lab:`“${v}”`})}
+  return out}
+const tfVal=(r,f)=>f==='vend'?(r.vendLabel||r.vend):f==='cnpj'?r.cnpj+' '+String(r.cnpj||'').replace(/\D/g,''):r[f];
+const tfHay=r=>norm([r.cliente,r.fantasia,r.nf,r.tipo,r.cnpj,String(r.cnpj||'').replace(/\D/g,''),r.cidade,r.uf,r.vendLabel||r.vend,r.util,r.rec,r.produto,r.lote,r.serial,r.linha,r.obs,r.emp,r.status,r.cfop,r.condRec].join(' '));
+function tfMatch(r,Q){if(!Q.length)return true;let hay=null;
+  for(const c of Q){let ok;
+    if(c.k==='cmp')ok=c.op==='>'?r.total>c.v:c.op==='<'?r.total<c.v:c.op==='>='?r.total>=c.v:r.total<=c.v;
+    else if(c.k==='rng')ok=r.total>=c.a&&r.total<=c.b;
+    else if(c.k==='dt')ok=String(r.dia).slice(5)===c.md&&(!c.y||String(r.dia).startsWith(c.y));
+    else if(c.k==='fld')ok=norm(tfVal(r,c.f)).includes(c.v);
+    else{if(hay==null)hay=tfHay(r);ok=hay.includes(c.v)}
+    if(ok===c.neg)return false}
+  return true}
+const sitOf=(r,docs,EQ)=>{if(docs)return r.cats.has('sc')?'sc':r.fat?'fat':'fora';const c=catOf(r,EQ);return c==='sc'?'sc':FAT_CATS.has(c)?'fat':'fora'};
+const SIT_LABEL={fat:'Faturável',sc:'A faturar (venda s/ cobrança)',fora:'Fora do faturamento'};
+function tfGroups(base){const st=[...new Set(base.map(r=>r.status).filter(Boolean))].sort();const in7=r=>{if(!r.venc)return false;const t=new Date();t.setHours(0,0,0,0);const d=(r.venc-t)/864e5;return d>=0&&d<=7};
+  return [
+    {id:'tipo',l:'Documento',o:[['NF-e','NF-e'],['Recibo','Recibo']],t:(r,v)=>r.tipo===v},
+    {id:'sit',l:'Situação',o:[['fat','Faturável'],['sc','A faturar'],['fora','Fora do faturamento']],t:(r,v)=>r._sit===v},
+    {id:'venc',l:'Vencimento',o:[['com','Com vencimento'],['sem','Sem vencimento'],['7d','Vence em até 7 dias']],t:(r,v)=>v==='com'?!!r.venc:v==='sem'?!r.venc:in7(r)},
+    {id:'status',l:'Status',o:st.map(s=>[s,s]),t:(r,v)=>r.status===v}].filter(g=>g.o.length>1||g.id==='sit')}
+function tfApply(base,docs){const EQ=eqCat(),Q=parseQ(TF.q);base.forEach(r=>r._sit=sitOf(r,docs,EQ));
+  const G=tfGroups(base),q1=base.filter(r=>tfMatch(r,Q));
+  const pass=(r,skip)=>G.every(g=>g.id===skip||!TF[g.id]||g.t(r,TF[g.id]));
+  return {rows:q1.filter(r=>pass(r)),G,Q,cnt:(g,v)=>q1.filter(r=>pass(r,g.id)&&(v===''||g.t(r,v))).length}}
+function tfDesc(){const Q=parseQ(TF.q),a=Q.map(c=>(c.neg?'sem ':'')+c.lab);
+  if(TF.tipo)a.push('documento: '+TF.tipo);if(TF.sit)a.push('situação: '+SIT_LABEL[TF.sit]);if(TF.venc)a.push({com:'com vencimento',sem:'sem vencimento','7d':'vence em até 7 dias'}[TF.venc]);if(TF.status)a.push('status: '+TF.status);return a}
 function table(){
-  $('thead').innerHTML='<tr>'+COLS.map(([k,l,n])=>`<th class="${n?'r':''}" data-k="${k}">${l}${sortK===k?(sortDir>0?' ▲':' ▼'):''}</th>`).join('')+'</tr>';
+  const docs=tblMode==='docs',cols=docs?DCOLS:COLS;if(!cols.some(c=>c[0]===sortK))sortK='data';
+  $('thead').innerHTML='<tr>'+cols.map(([k,l,n])=>`<th class="${n?'r':''}" data-k="${k}">${l}${sortK===k?(sortDir>0?' ▲':' ▼'):''}</th>`).join('')+'</tr>';
   $('thead').querySelectorAll('th').forEach(th=>th.onclick=()=>{const k=th.dataset.k;sortDir=sortK===k?-sortDir:1;sortK=k;table()});
-  const rows=[...listRows(VIEW)].sort((a,b)=>{const x=a[sortK],y=b[sortK];return (x>y?1:x<y?-1:0)*sortDir});
-  const pages=Math.max(1,Math.ceil(rows.length/PER));page=Math.min(page,pages-1);
-  $('tbody').innerHTML=rows.slice(page*PER,page*PER+PER).map(r=>'<tr'+(isSC(r)?' class="sc-row" title="Remessa sem cobrança — fora do faturamento"':isBr(r)?' class="br-row" title="Brinde / bonificação — fora do faturamento"':'')+'>'+COLS.map(([k,,n])=>{
-    let v=r[k];if(!n&&k!=='data')v=esc(v);if(k==='util')v=`<span class="util-tag">${v}</span>`;else if(k==='emp')v=`<span class="emp-tag" style="--ec:${empColor(r.emp)}">${esc(r.emp)}</span>`+(r.inter?' <span class="util-tag" title="Nota emitida para outra empresa do grupo">intragrupo</span>':'');else if(k==='linha')v=`<span class="line-tag${r.inferido?' inf':''}" title="${esc(r.fonte)} · confiança ${esc(r.confianca)}">${esc(v)}</span>`;else if(k==='data')v=fmtD(v)+' '+r.data.toTimeString().slice(0,5);else if(k==='total')v=`<span class="tag ${v===0?'zero':''}">${BRL.format(v)}</span>`;else if(k==='frete'&&isSC(r)&&r.frete>0)v=`<span class="tag sc" title="Frete de remessa sem cobrança (fora do faturamento)">${BRL.format(v)}</span>`;else if(k==='qtd')v=NUM.format(v);else if(n)v=BRL.format(v);
-    return `<td class="${n?'r':k==='cliente'||k==='produto'?'text-cell':''}" ${k==='cliente'||k==='produto'?`title="${esc(r[k])}"`:k==='cfop'&&CFOP_DESC[cfopDigits(r)]?`title="${esc(CFOP_DESC[cfopDigits(r)])}"`:''}>${v}</td>`}).join('')+'</tr>').join('');
-  $('tblInfo').textContent=`${NUM.format(rows.length)} de ${NUM.format(ALL.length)} itens`+(remMode(VIEW)?' · remessas com frete a cobrar':'');
-  $('pgInfo').textContent=`Página ${page+1} de ${pages}`;
-  $('pgPrev').disabled=page===0;$('pgNext').disabled=page>=pages-1;
+  const base=docs?docsOf(VIEW):[...listRows(VIEW)],F=tfApply(base,docs);
+  const rows=F.rows.sort((a,b)=>{let x=a[sortK],y=b[sortK];if(x==null)x='';if(y==null)y='';return ((x>y?1:x<y?-1:0)*sortDir)||(a.data-b.data)});
+  DOC_NAV=[...new Set(rows.map(r=>r.nfk))];LAST_TBL={rows,docs,cols,total:base.length};
+  const shown=rows.slice(0,3000);
+  $('tbody').innerHTML=shown.map(r=>{const cls=r._sit==='sc'?' sc-row':r._sit==='fora'?' br-row':'';
+    return `<tr class="clk${cls}" data-k="${esc(r.nfk)}" tabindex="0" title="Clique para ver ${r.tipo==='Recibo'?'o recibo':'a NF'} ${esc(r.nf)} completo">`+cols.map(([k,,n])=>cellHtml(r,k,n)).join('')+'</tr>'}).join('')
+    ||`<tr><td colspan="${cols.length}" class="cls-empty">Nenhum registro atende aos filtros do quadro. <button type="button" class="tf-link" data-tfclear>Limpar filtros do quadro</button></td></tr>`;
+  // atalhos com contagem
+  $('tfChips').innerHTML=F.G.map(g=>`<div class="tf-g" role="group" aria-label="${g.l}"><span>${g.l}</span>${[['','Todos'],...g.o].map(([v,l])=>{const n=F.cnt(g,v),on=TF[g.id]===v;return `<button type="button" class="tf-c${on?' on':''}${v&&!n&&!on?' nil':''}" data-g="${g.id}" data-v="${esc(v)}" aria-pressed="${on}">${esc(l)} <b>${NUM.format(n)}</b></button>`}).join('')}</div>`).join('');
+  const s=k=>sumBy(rows.filter(r=>r._sit===k),'total'),un=docs?rows.length:new Set(rows.map(r=>r.nfk)).size,d=tfDesc();
+  $('tfSum').innerHTML=`<span><b>${NUM.format(rows.length)}</b> ${docs?'documento(s)':'item(ns)'}${docs?'':` · ${NUM.format(un)} documento(s)`} · ${NUM.format(new Set(rows.map(r=>r.cnpj)).size)} cliente(s)</span><span>Total <b>${BRL.format(sumBy(rows,'total'))}</b></span><span class="t-fat">Faturável ${BRL.format(s('fat'))}</span><span class="t-sc">A faturar ${BRL.format(s('sc'))}</span><span class="t-fora">Fora ${BRL.format(s('fora'))}</span>${d.length?`<span class="tf-int">Filtros do quadro: ${d.map(esc).join(' · ')}</span>`:''}${rows.length>shown.length?`<span class="tf-int">Exibindo ${NUM.format(shown.length)} na tela — o PDF inclui todos</span>`:''}`;
+  $('tblInfo').textContent=`${NUM.format(rows.length)} de ${NUM.format(base.length)} ${docs?'documentos':'itens'} · clique para ver o documento`;
+  $('pgInfo').textContent='';
 }
+(function initTf(){let t;
+  $('tfQ').oninput=()=>{clearTimeout(t);t=setTimeout(()=>{TF.q=$('tfQ').value;table()},180)};
+  $('tfQ').onkeydown=e=>{if(e.key==='Escape'&&$('tfQ').value){e.stopPropagation();$('tfQ').value='';TF.q='';table()}};
+  const clear=()=>{Object.keys(TF).forEach(k=>TF[k]='');$('tfQ').value='';table()};
+  $('tfClear').onclick=clear;
+  $('tfChips').addEventListener('click',e=>{const b=e.target.closest('button[data-g]');if(!b)return;TF[b.dataset.g]=TF[b.dataset.g]===b.dataset.v?'':b.dataset.v;table()});
+  $('tbody').addEventListener('click',e=>{if(e.target.closest('[data-tfclear]')){e.stopPropagation();clear()}},true);
+  $('btnListPdf').onclick=e=>{e.stopPropagation();openListPdf()};
+})();
+// ---- PDF da lista exibida no quadro ----
+function openListPdf(){
+  if(!LAST_TBL)table();const L=LAST_TBL;if(!L||!L.rows.length)return toast('Não há registros no quadro para gerar o PDF');
+  const w=window.open('','_blank');if(!w)return toast('Permita pop-ups para visualizar o PDF');
+  const R=L.rows,docs=L.docs,EL=empsIn(R),now=new Date().toLocaleString('pt-BR'),s=k=>sumBy(R.filter(r=>r._sit===k),'total'),tot=sumBy(R,'total');
+  const ndoc=new Set(R.map(r=>r.nfk)).size,ncli=new Set(R.map(r=>r.cnpj)).size;
+  const dt=d=>d instanceof Date?fmtD(d):'—',num=(r)=>`<span class="dk ${r.tipo==='Recibo'?'rc':''}">${r.tipo==='Recibo'?'REC':'NF-e'}</span> ${esc(r.nf)}`;
+  const et=e=>`<span class="ed" style="background:${empColor(e)}"></span>${esc(e)}`;
+  const C=docs?[
+      ['Emissão',r=>dt(r.data),'',7],['Venc.',r=>dt(r.venc),'',7],['Empresa',r=>et(r.emp),'',7],['Documento',num,'',8],['Cliente',r=>`<b>${esc(r.cliente)}</b><small>${esc(r.cnpj)} · ${esc(r.cidade)}/${esc(r.uf)}</small>`,'',21],
+      ['Vendedor',r=>esc(r.vend),'',12],['Utilização / Recebimento',r=>`${esc(r.util)}<small>${esc(r.rec)}${r.condRec?' · '+esc(r.condRec):''}</small>`,'',12],['Itens',r=>NUM.format(r.itens),'r',4],
+      ['Desconto',r=>BRL.format(r.desc),'r',7],['Frete',r=>BRL.format(r.frete),'r',6],['Total',r=>`<b>${BRL.format(r.total)}</b>`,'r',8],['Observação',r=>esc(String(r.obs||'').replace(/\s+/g,' ').slice(0,160))+(String(r.obs||'').length>160?'…':''),'ob',14]]
+    :[['Emissão',r=>dt(r.data),'',6],['Venc.',r=>dt(r.venc),'',6],['Empresa',r=>et(r.emp),'',7],['Documento',num,'',7],['Cliente',r=>`<b>${esc(r.cliente)}</b><small>${esc(r.cidade)}/${esc(r.uf)}</small>`,'',17],
+      ['Vendedor',r=>esc(r.vendLabel),'',11],['Utilização',r=>esc(r.util),'',9],['Produto',r=>`${esc(r.produto)}${r.lote?`<small>Lote ${esc(r.lote)}</small>`:''}`,'',19],
+      ['Qtd',r=>NUM.format(r.qtd),'r',4],['Desconto',r=>BRL.format(r.desc),'r',6],['Frete',r=>BRL.format(r.frete),'r',5],['Total',r=>`<b>${BRL.format(r.total)}</b>`,'r',7]];
+  const ti=C.findIndex(c=>c[0]==='Total'),dsc=C.findIndex(c=>c[0]==='Desconto');
+  const sortLab=(L.cols.find(c=>c[0]===sortK)||[,'Emissão'])[1]+(sortDir>0?' (crescente)':' (decrescente)');
+  const fl=[...filterList(),...(tfDesc().length?[['Filtros do quadro',tfDesc().join(' · ')]]:[]),['Visão',docs?'Documentos (um registro por NF-e/recibo)':'Itens'],['Ordenação',sortLab]];
+  const body=R.map(r=>`<tr class="${r._sit}">${C.map(c=>`<td class="${c[2]}">${c[1](r)}</td>`).join('')}</tr>`).join('');
+  const foot=`<tr>${C.map((c,i)=>i===0?`<td colspan="${dsc}">Totais — ${NUM.format(R.length)} ${docs?'documento(s)':'item(ns)'}</td>`:i<dsc?'':c[0]==='Desconto'?`<td class="r">${BRL.format(sumBy(R,'desc'))}</td>`:c[0]==='Frete'?`<td class="r">${BRL.format(sumBy(R,'frete'))}</td>`:c[0]==='Total'?`<td class="r">${BRL.format(tot)}</td>`:c[0]==='Qtd'?`<td class="r">${NUM.format(sumBy(R,'qtd'))}</td>`:'<td></td>').join('')}</tr>`;
+  const html=`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Registros faturados — Grupo Labmedic</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet"><style>
+@page{size:A4 landscape;margin:11mm 9mm 13mm;@bottom-left{content:"Grupo Labmedic · Registros faturados · gerado em ${now}";font:7.5px Arial;color:#94a3b8}@bottom-right{content:"Página " counter(page) " de " counter(pages);font:7.5px Arial;color:#94a3b8}}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font-family:"Plus Jakarta Sans",Arial,sans-serif;font-size:8.6px;color:#1d2b3a;background:#e9eef2}
+.bar-top{position:sticky;top:0;z-index:5;background:#0b2540;color:#fff;padding:10px 18px;display:flex;justify-content:space-between;align-items:center;font-size:12px}.bar-top button{background:#0fa3a3;color:#fff;border:0;border-radius:6px;padding:8px 14px;font-weight:700;cursor:pointer;margin-left:6px}.bar-top button+button{background:#334e68}
+.page{background:#fff;width:297mm;margin:16px auto;padding:11mm 9mm;box-shadow:0 4px 18px rgba(0,0,0,.12)}
+.hd{display:flex;justify-content:space-between;align-items:stretch;border-radius:8px;overflow:hidden;margin-bottom:10px}.hd .l{flex:1;background:#0b2540;color:#fff;padding:12px 16px;display:flex;gap:12px;align-items:center}.hd i{width:38px;height:38px;border-radius:8px;background:#0fa3a3;font:800 22px/38px Arial;text-align:center;font-style:normal}
+.hd h1{font-size:17px;letter-spacing:.2px}.hd p{color:#9fc6d6;font-size:9px;margin-top:2px}.hd .r{background:#0fa3a3;color:#fff;padding:12px 16px;text-align:right;min-width:62mm;display:flex;flex-direction:column;justify-content:center}.hd .r b{font-size:12px}.hd .r span{font-size:8.5px;opacity:.9}
+.fl{display:grid;grid-template-columns:repeat(3,1fr);gap:3px 16px;background:#f3f7fa;border:1px solid #e1e8ee;border-radius:6px;padding:7px 11px;margin-bottom:10px;color:#475569;font-size:8px}.fl b{color:#0b2540}
+.kp{display:grid;grid-template-columns:repeat(6,1fr);gap:7px;margin-bottom:10px}.kp div{border:1px solid #dbe4ec;border-radius:6px;padding:7px 9px;border-top:3px solid #0fa3a3}.kp span{display:block;font-size:7px;font-weight:700;text-transform:uppercase;color:#64748b}.kp b{font-size:12.5px;color:#0b2540}.kp .sc{border-top-color:#7c5cff}.kp .fo{border-top-color:#f59e0b}.kp .h{background:#0b2540;border-color:#0b2540}.kp .h span{color:#9fc6d6}.kp .h b{color:#fff}
+.lg{display:flex;gap:14px;font-size:7.5px;color:#64748b;margin:0 0 5px}.lg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px;border:1px solid #dbe4ec}
+table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}tfoot{display:table-footer-group}th{background:#0b2540;color:#fff;text-align:left;padding:5px 5px;font-weight:700;font-size:7.6px;text-transform:uppercase;letter-spacing:.2px}
+td{padding:4px 5px;border-bottom:1px solid #e6edf2;vertical-align:top;overflow-wrap:anywhere}td small{display:block;color:#64748b;font-size:7.2px;margin-top:1px}tr{break-inside:avoid}tbody tr:nth-child(even) td{background:#f8fafc}
+tr.sc td{background:#f4f0ff!important}tr.fora td{background:#fff7e8!important}.r{text-align:right;white-space:nowrap}td.ob{color:#475569;font-size:7.4px}
+tfoot td{background:#e3f6f4!important;font-weight:800;color:#0b2540;border-top:2px solid #0b2540;padding:6px 5px}
+.dk{display:inline-block;font-size:6.6px;font-weight:800;padding:1px 4px;border-radius:3px;background:#e3f6f4;color:#0b7f7f}.dk.rc{background:#fff1d6;color:#9a6200}.ed{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px}
+.ft{margin-top:10px;color:#94a3b8;font-size:7.5px;display:flex;justify-content:space-between;border-top:1px solid #e1e8ee;padding-top:6px}
+@media print{body{background:#fff}.bar-top{display:none}.page{margin:0;width:auto;box-shadow:none;padding:0}}</style></head><body>
+<div class="bar-top"><span>Pré-visualização — ${NUM.format(R.length)} registro(s) · use “Salvar como PDF” na janela de impressão</span><div><button onclick="print()">Salvar / Imprimir PDF</button><button onclick="window.close()">Fechar</button></div></div>
+<div class="page"><div class="hd"><div class="l"><i>L</i><div><h1>Registros faturados${docs?' — por documento':' — por item'}</h1><p>Grupo Labmedic · ${EL.map(e=>esc(e.emp)).join(' · ')} · Período das movimentações: ${perMov(R)}</p></div></div><div class="r"><b>${BRL.format(tot)}</b><span>${NUM.format(R.length)} registro(s) · ${NUM.format(ndoc)} documento(s)</span><span>Gerado em ${now}</span></div></div>
+<div class="fl">${fl.map(([a,b])=>`<div>${esc(a)}: <b>${esc(b)}</b></div>`).join('')}</div>
+<div class="kp"><div class="h"><span>Total listado</span><b>${BRL.format(tot)}</b></div><div><span>Faturável</span><b>${BRL.format(s('fat'))}</b></div><div class="sc"><span>A faturar (s/ cobrança)</span><b>${BRL.format(s('sc'))}</b></div><div class="fo"><span>Fora do faturamento</span><b>${BRL.format(s('fora'))}</b></div><div><span>Documentos</span><b>${NUM.format(ndoc)}</b></div><div><span>Clientes</span><b>${NUM.format(ncli)}</b></div></div>
+<div class="lg"><span><i style="background:#fff"></i>Faturável (locação / insumo)</span><span><i style="background:#f4f0ff"></i>Venda sem cobrança — a faturar em fatura + boleto únicos</span><span><i style="background:#fff7e8"></i>Fora do faturamento (brinde, equipamento)</span></div>
+<table><colgroup>${C.map(c=>`<col style="width:${c[3]}%">`).join('')}</colgroup><thead><tr>${C.map(c=>`<th class="${c[2]==='r'?'r':''}">${c[0]}</th>`).join('')}</tr></thead><tbody>${body}</tbody><tfoot>${foot}</tfoot></table>
+<div class="ft"><span>Documento gerencial gerado a partir do relatório de faturamento analítico · ${esc(META.arquivo)}</span><span>Proibida a cópia ou reprodução sem autorização da diretoria.</span></div></div></body></html>`;
+  w.document.open();w.document.write(html);w.document.close()}
+$('tbody').addEventListener('click',e=>{const tr=e.target.closest('tr[data-k]');if(tr)openDoc(tr.dataset.k)});
+$('tbody').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const tr=e.target.closest('tr[data-k]');if(tr){e.preventDefault();openDoc(tr.dataset.k)}}});
+document.querySelectorAll('#tblMode button').forEach(b=>b.onclick=e=>{e.stopPropagation();tblMode=b.dataset.m;document.querySelectorAll('#tblMode button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));table()});
+/* ---------- Modal: documento (NF-e / recibo) com todos os itens vinculados ---------- */
+const fcpOf=s=>{let t=0;String(s||'').replace(/valor\s*fcp\s*r\$\s*([\d.]+,\d{2})/gi,(m,v)=>{t+=+v.replace(/\./g,'').replace(',','.')||0;return m});return t};
+function docData(k){const items=DOCIDX.get(k);if(!items)return null;const d=docsOf(items)[0],EQ=eqCat();
+  const sc=items.some(isSC),fat=items.some(r=>FAT_CATS.has(catOf(r,EQ)));
+  return {d,items:[...items].sort((a,b)=>(a.seq||0)-(b.seq||0)),sc,fat,fcp:fcpOf(d.obs)}}
+function docHtml(x,print){const {d,items}=x,e=EMPS.find(v=>v.emp===d.emp)||{};
+  const inView=new Set(VIEW),fora=items.filter(r=>!inView.has(r)).length;
+  const info=[['Emissão',fmtDT(d.data)],['Vencimento',d.venc?`${fmtDT(d.venc)} <small>(${d.prazo} dia${d.prazo===1?'':'s'})</small>`:x.sc?'Fatura posterior (documento único)':'—'],['Status',esc(d.status||'—')],
+    ['Cliente',`<b>${esc(d.cliente)}</b>${d.fantasia?`<br><small>${esc(d.fantasia)}</small>`:''}`],['CNPJ/CPF',esc(d.cnpj)],['Cidade / UF',`${esc(d.cidade)} / ${esc(d.uf)}`],
+    ['Vendedor',esc(d.vend)],['Utilização',esc(d.util)],['CFOP',d.cfop?esc(d.cfop)+(CFOP_DESC[String(d.cfop).replace(/\D/g,'')]?`<br><small>${esc(CFOP_DESC[String(d.cfop).replace(/\D/g,'')])}</small>`:''):'—'],
+    ['Forma de recebimento',esc(d.rec)],['Condição',esc(d.condRec||'—')],['Empresa emissora',`${esc(d.emp)}${e.cnpj?`<br><small>${esc(e.cnpj)}</small>`:''}`]];
+  const vals=[['Valor bruto (tabela)',d.totProd],['Descontos',d.desc],['Frete',d.frete],['ICMS destacado',d.icms],...(d.ipi?[['IPI',d.ipi]]:[]),...(x.fcp?[['FCP (observação)',x.fcp]]:[]),['Total do documento',d.total,1]];
+  const st=x.sc?['sc','A faturar · fatura e boleto únicos']:x.fat?['ok','Faturável']:['off','Fora do faturamento'];
+  return `<div class="doc-hd"><div><span class="doc-tag ${d.tipo==='Recibo'?'rec':''}">${esc(d.tipo)}</span> <span class="emp-tag" style="--ec:${empColor(d.emp)}">${esc(d.emp)}</span> <span class="doc-st ${st[0]}">${st[1]}</span>${d.inter?' <span class="doc-st warn">Intragrupo</span>':''}
+    <h2 id="docTitle">${d.tipo==='Recibo'?'Recibo':'NF'} nº ${esc(d.nf)}</h2><p>${esc(d.cat)}</p></div>${print?'':`<div class="doc-nav"><button type="button" data-nav="-1" aria-label="Documento anterior">‹</button><button type="button" class="doc-pdf" data-print title="Gerar PDF deste registro">▤ PDF</button><span>${DOC_NAV.indexOf(d.nfk)+1} / ${DOC_NAV.length}</span><button type="button" data-nav="1" aria-label="Próximo documento">›</button><button type="button" class="doc-x" data-close aria-label="Fechar">×</button></div>`}</div>
+  <div class="doc-info">${info.map(([l,v])=>`<div><span>${l}</span><div>${v}</div></div>`).join('')}</div>
+  <div class="doc-vals">${vals.map(([l,v,h])=>`<div class="${h?'h':''}"><span>${l}</span><b>${BRL.format(v)}</b></div>`).join('')}</div>
+  <h3>Itens vinculados <small>${items.length} item(ns) · ${NUM.format(d.qtd)} un${fora&&!print?` · ${fora} fora dos filtros atuais`:''}</small></h3>
+  <div class="doc-items"><table><thead><tr><th>#</th><th>Cód.</th><th>Produto / serviço</th><th>Linha de atuação</th><th>Lote</th><th>Serial</th><th>NCM</th><th class="r">Qtd</th><th class="r">Preço un.</th><th class="r">Bruto</th><th class="r">Desconto</th><th class="r">ICMS</th><th class="r">Frete</th><th class="r">Total</th></tr></thead>
+  <tbody>${items.map((r,i)=>`<tr${inView.has(r)||print?'':' class="out"'}><td>${i+1}</td><td>${esc(r.codProd||'—')}</td><td class="wrap"><b>${esc(r.produto)}</b>${r.util!==d.util?`<br><small>${esc(r.util)}</small>`:''}</td><td>${esc(r.linha)}</td><td>${esc(r.lote||'—')}</td><td class="wrap"><small>${esc(r.serial||'—')}</small></td><td>${esc(r.ncm||'—')}</td><td class="r">${NUM.format(r.qtd)}</td><td class="r">${r.preco?BRL.format(r.preco):'—'}</td><td class="r">${BRL.format(r.totProd)}</td><td class="r">${BRL.format(r.desc)}</td><td class="r">${BRL.format(r.icms||0)}${r.pIcms?`<br><small>${NUM.format(r.pIcms)}%</small>`:''}</td><td class="r">${BRL.format(r.frete)}</td><td class="r"><b>${BRL.format(r.total)}</b></td></tr>`).join('')}</tbody>
+  <tfoot><tr><td colspan="7">Totais</td><td class="r">${NUM.format(d.qtd)}</td><td></td><td class="r">${BRL.format(d.totProd)}</td><td class="r">${BRL.format(d.desc)}</td><td class="r">${BRL.format(d.icms)}</td><td class="r">${BRL.format(d.frete)}</td><td class="r">${BRL.format(d.total)}</td></tr></tfoot></table></div>
+  <h3>Observação</h3><div class="doc-obs">${d.obs?esc(d.obs):'<i>Sem observação registrada no documento.</i>'}</div>`}
+function openDoc(k){const x=docData(k);if(!x)return;const dlg=$('docDlg');
+  $('docBody').innerHTML=docHtml(x)+`<div class="doc-act"><button type="button" class="btn btn-ghost" data-cli>Filtrar por este cliente</button><button type="button" class="btn btn-ghost" data-print>▤ Gerar PDF do registro</button><button type="button" class="btn btn-primary" data-close>Fechar</button></div>`;
+  dlg.dataset.k=k;if(!dlg.open)dlg.showModal();$('docBody').scrollTop=0}
+(function initDoc(){const dlg=$('docDlg');
+  dlg.addEventListener('click',e=>{if(e.target===dlg){dlg.close();return}
+    const b=e.target.closest('button');if(!b)return;const k=dlg.dataset.k;
+    if(b.hasAttribute('data-close'))dlg.close();
+    else if(b.dataset.nav){const i=DOC_NAV.indexOf(k)+ +b.dataset.nav;if(i>=0&&i<DOC_NAV.length)openDoc(DOC_NAV[i])}
+    else if(b.hasAttribute('data-print'))printDoc(k);
+    else if(b.hasAttribute('data-cli')){const x=docData(k);if(!x)return;$('fCliente').value=x.d.cliente;$('fClienteBusca').value=x.d.cliente;$('cliCombo').classList.add('has');dlg.close();apply();toast('Filtro aplicado: '+x.d.cliente)}});
+  dlg.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowLeft'){const i=DOC_NAV.indexOf(dlg.dataset.k)+(e.key==='ArrowRight'?1:-1);if(i>=0&&i<DOC_NAV.length)openDoc(DOC_NAV[i])}});
+})();
+function printDoc(k){const x=docData(k);if(!x)return;const w=window.open('','_blank');if(!w)return toast('Permita pop-ups para gerar o PDF do registro');
+  const {d,items}=x,e=EMPS.find(v=>v.emp===d.emp)||{},ec=empColor(d.emp),now=new Date().toLocaleString('pt-BR'),cf=String(d.cfop||'').replace(/\D/g,''),rec=d.tipo==='Recibo';
+  const st=x.sc?['sc','A faturar · fatura e boleto únicos']:x.fat?['ok','Faturável']:['off','Fora do faturamento'];
+  const f=(l,v)=>`<div class="f"><span>${l}</span><b>${v||'—'}</b></div>`;
+  const tots=[['Valor bruto (tabela)',d.totProd],['(−) Descontos',d.desc],['(+) Frete',d.frete],...(d.ipi?[['(+) IPI',d.ipi]]:[]),['ICMS destacado (informativo)',d.icms],...(x.fcp?[['FCP informado na observação',x.fcp]]:[])];
+  w.document.open();w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${rec?'Recibo':'NF'} ${esc(d.nf)} · ${esc(d.emp)} — Grupo Labmedic</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet"><style>
+@page{size:A4 portrait;margin:12mm 11mm 14mm;@bottom-left{content:"Espelho gerencial — não substitui o documento fiscal";font:7.5px Arial;color:#94a3b8}@bottom-right{content:"Página " counter(page) " de " counter(pages);font:7.5px Arial;color:#94a3b8}}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font-family:"Plus Jakarta Sans",Arial,sans-serif;font-size:9px;color:#1d2b3a;background:#e9eef2}
+.bar-top{position:sticky;top:0;z-index:5;background:#0b2540;color:#fff;padding:10px 18px;display:flex;justify-content:space-between;align-items:center;font-size:12px}.bar-top button{background:#0fa3a3;color:#fff;border:0;border-radius:6px;padding:8px 14px;font-weight:700;cursor:pointer;margin-left:6px}.bar-top button+button{background:#334e68}
+.page{background:#fff;width:210mm;margin:16px auto;padding:12mm 11mm;box-shadow:0 4px 18px rgba(0,0,0,.12)}
+.hd{display:grid;grid-template-columns:1fr 64mm;gap:10px;margin-bottom:10px}.em{display:flex;gap:11px;align-items:center;border-left:5px solid ${ec};padding:4px 0 4px 11px}.em i{flex:none;width:40px;height:40px;border-radius:8px;background:#0b2540;color:#fff;font:800 22px/40px Arial;text-align:center;font-style:normal}
+.em small{font-size:7.5px;font-weight:800;letter-spacing:1.2px;color:#0fa3a3}.em h1{font-size:12.5px;color:#0b2540;line-height:1.25}.em p{color:#64748b;font-size:8.5px}
+.dc{background:#0b2540;color:#fff;border-radius:8px;padding:10px 12px}.dc small{font-size:7.5px;text-transform:uppercase;letter-spacing:.8px;color:#9fc6d6;font-weight:700}.dc h2{font-size:19px;margin:2px 0 5px}.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:7.5px;font-weight:800;background:#0fa3a3;color:#fff}.pill.sc{background:#7c5cff}.pill.off{background:#e2566b}.pill.w{background:#f59e0b}
+.strip{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid #dbe4ec;border-radius:7px;margin-bottom:10px;overflow:hidden}.strip .f{padding:7px 10px;border-right:1px solid #dbe4ec}.strip .f:last-child{border:0}
+.f span{display:block;font-size:7px;text-transform:uppercase;font-weight:800;color:#64748b;letter-spacing:.4px;margin-bottom:1px}.f b{font-size:9.5px;color:#0b2540;font-weight:700}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}.box{border:1px solid #dbe4ec;border-radius:7px;overflow:hidden}.box h3{background:#f3f7fa;border-bottom:1px solid #dbe4ec;font-size:8px;text-transform:uppercase;letter-spacing:.6px;color:#0b2540;padding:6px 10px}.box .g{display:grid;grid-template-columns:1fr 1fr;gap:7px 12px;padding:9px 10px}.box .g .w{grid-column:1/-1}
+h4{font-size:9.5px;color:#0b2540;margin:4px 0 6px;display:flex;align-items:center;gap:6px}h4:before{content:"";width:4px;height:11px;background:#0fa3a3;border-radius:2px}h4 small{font-weight:400;color:#64748b}
+table{width:100%;border-collapse:collapse;font-size:7.8px}thead{display:table-header-group}th{background:#0b2540;color:#fff;text-align:left;padding:5px 4px;font-size:7px;text-transform:uppercase}td{padding:5px 4px;border-bottom:1px solid #e6edf2;vertical-align:top}tbody tr:nth-child(even) td{background:#f8fafc}tr{break-inside:avoid}.r{text-align:right;white-space:nowrap}td small{display:block;color:#64748b;font-size:6.9px;margin-top:1px}
+.bt{display:grid;grid-template-columns:1fr 70mm;gap:10px;margin-top:12px;break-inside:avoid}.obs{border:1px solid #dbe4ec;border-left:4px solid #0fa3a3;border-radius:7px;padding:9px 11px;white-space:pre-wrap;font-size:8.6px;line-height:1.5;background:#fbfcfd}.obs b{display:block;font-size:7px;text-transform:uppercase;color:#64748b;margin-bottom:3px;white-space:normal}
+.tt{border:1px solid #dbe4ec;border-radius:7px;overflow:hidden}.tt div{display:flex;justify-content:space-between;padding:5px 10px;border-bottom:1px solid #eef2f6}.tt div span{color:#475569}.tt .i{color:#94a3b8;font-style:italic}.tt .T{background:#0b2540;color:#fff;font-size:12px;font-weight:800;padding:9px 10px;border:0}.tt .T span{color:#9fc6d6;font-size:8px;text-transform:uppercase;align-self:center}
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:26px;break-inside:avoid}.sg div{border-top:1px solid #94a3b8;padding-top:3px;font-size:7px;color:#64748b;text-transform:uppercase;text-align:center}
+.ft{margin-top:12px;padding-top:6px;border-top:1px solid #dbe4ec;color:#94a3b8;font-size:7.2px;display:flex;justify-content:space-between}
+@media print{body{background:#fff}.bar-top{display:none}.page{margin:0;width:auto;box-shadow:none;padding:0}}</style></head><body>
+<div class="bar-top"><span>Pré-visualização do registro — use “Salvar como PDF” na janela de impressão</span><div><button onclick="print()">Salvar / Imprimir PDF</button><button onclick="window.close()">Fechar</button></div></div>
+<div class="page">
+<div class="hd"><div class="em"><i>L</i><div><small>GRUPO LABMEDIC · EMPRESA EMISSORA</small><h1>${esc(e.nome||d.emp)}</h1><p>CNPJ ${esc(e.cnpj||'—')} · ${esc(d.emp)}</p></div></div>
+<div class="dc"><small>${rec?'Recibo de locação':'Nota fiscal eletrônica'}</small><h2>Nº ${esc(d.nf)}</h2><span class="pill ${st[0]}">${st[1]}</span>${d.inter?' <span class="pill w">Intragrupo</span>':''}</div></div>
+<div class="strip">${f('Emissão',fmtDT(d.data))}${f('Vencimento',d.venc?fmtDT(d.venc)+` <small>(${d.prazo} dia${d.prazo===1?'':'s'})</small>`:x.sc?'Fatura posterior':'—')}${f('Status',esc(d.status))}${f('Total do documento',BRL.format(d.total))}</div>
+<div class="two"><div class="box"><h3>Destinatário</h3><div class="g"><div class="f w"><span>Razão social</span><b>${esc(d.cliente)}</b></div>${d.fantasia?`<div class="f w"><span>Nome fantasia</span><b>${esc(d.fantasia)}</b></div>`:''}${f('CNPJ / CPF',esc(d.cnpj))}${f('Cidade / UF',esc(d.cidade)+' / '+esc(d.uf))}</div></div>
+<div class="box"><h3>Condições comerciais</h3><div class="g">${f('Vendedor',esc(d.vend))}${f('Utilização',esc(d.util))}<div class="f w"><span>CFOP</span><b>${d.cfop?esc(d.cfop)+(CFOP_DESC[cf]?' — '+esc(CFOP_DESC[cf]):''):rec?'Recibo (sem CFOP)':'—'}</b></div>${f('Forma de recebimento',esc(d.rec))}${f('Condição',esc(d.condRec))}</div></div></div>
+<h4>Itens vinculados <small>${items.length} item(ns) · ${NUM.format(d.qtd)} unidade(s) · composição: ${esc(d.cat)}</small></h4>
+<table><thead><tr><th style="width:3%">#</th><th style="width:6%">Cód.</th><th>Produto / serviço</th><th style="width:12%">Linha</th><th style="width:8%">NCM</th><th class="r" style="width:5%">Qtd</th><th class="r" style="width:9%">Preço un.</th><th class="r" style="width:9%">Bruto</th><th class="r" style="width:8%">Desconto</th><th class="r" style="width:8%">ICMS</th><th class="r" style="width:6%">Frete</th><th class="r" style="width:9%">Total</th></tr></thead>
+<tbody>${items.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.codProd||'—')}</td><td><b>${esc(r.produto)}</b>${[r.lote?'Lote '+esc(r.lote):'',r.serial?'Série '+esc(r.serial):'',r.util!==d.util?esc(r.util):''].filter(Boolean).map(t=>`<small>${t}</small>`).join('')}</td><td>${esc(r.linha)}</td><td>${esc(r.ncm||'—')}</td><td class="r">${NUM.format(r.qtd)}</td><td class="r">${r.preco?BRL.format(r.preco):'—'}</td><td class="r">${BRL.format(r.totProd)}</td><td class="r">${BRL.format(r.desc)}</td><td class="r">${BRL.format(r.icms||0)}${r.pIcms?`<small>${NUM.format(r.pIcms)}%</small>`:''}</td><td class="r">${BRL.format(r.frete)}</td><td class="r"><b>${BRL.format(r.total)}</b></td></tr>`).join('')}</tbody></table>
+<div class="bt"><div class="obs"><b>Observação</b>${d.obs?esc(d.obs):'<i>Sem observação registrada no documento.</i>'}</div>
+<div class="tt">${tots.map(([l,v])=>`<div class="${/informativo|FCP/.test(l)?'i':''}"><span>${l}</span><b>${BRL.format(v)}</b></div>`).join('')}<div class="T"><span>Total do documento</span>${BRL.format(d.total)}</div></div></div>
+${x.sc?'<div class="sg"><div>Conferido por (faturamento)</div><div>Data de inclusão na fatura única</div></div>':''}
+<div class="ft"><span>Gerado em ${now} · Fonte: ${esc(META.arquivo)}</span><span>Espelho gerencial — não substitui o documento fiscal</span></div></div></body></html>`);w.document.close()}
 $('tblToggle').onclick=()=>{const b=$('tblBody'),o=b.hidden;b.hidden=!o;$('tblToggle').setAttribute('aria-expanded',String(o))};
 $('pgPrev').onclick=()=>{page--;table()};$('pgNext').onclick=()=>{page++;table()};
 
@@ -1033,10 +1412,10 @@ const fill=argb=>({type:'pattern',pattern:'solid',fgColor:{argb}});
 // Aba dedicada a uma empresa, na estrutura do relatório "Faturamento analítico" (Fluxis):
 // cabeçalho da empresa + período, itens, e os blocos "Resumo por cliente / vendedor / produto / utilização / estado"
 function companySheet(wb,name,e,R){
-  const N=24,EQC=eqCat(),cc=concil(R),k=kpiSet(R),isFatR=r=>{const c=catOf(r,EQC);return c==='loc'||c==='ins'};
+  const N=24,EQC=eqCat(),cc=concil(R),k=kpiSet(R),isFatR=r=>FAT_CATS.has(catOf(r,EQC));
   const ws=wb.addWorksheet(name,{properties:{tabColor:{argb:empArgb(e.emp)}},views:[{state:'frozen',ySplit:8}],pageSetup:{orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,paperSize:9}});
-  const cols=[{h:'#',w:6,v:(r,i)=>i+1},{h:'Dt. Registro',w:16,k:'data',fmt:'dd/mm/yyyy hh:mm'},{h:'Tipo',w:7,k:'tipo'},{h:'Número',w:9,k:'nf'},{h:'CpfCnpj',w:20,k:'cnpj'},
-    {h:'Cliente',w:40,k:'cliente'},{h:'Estado',w:7,k:'uf'},{h:'Cidade',w:18,k:'cidade'},{h:'#Vend.',w:8,k:'vend'},{h:'Utilização',w:18,k:'util'},{h:'CFOP',w:8,k:'cfop'},
+  const cols=[{h:'#',w:6,v:(r,i)=>i+1},{h:'Dt. Emissão',w:12,k:'data',fmt:'dd/mm/yyyy'},{h:'Tipo',w:7,k:'tipo'},{h:'Número',w:9,k:'nf'},{h:'CpfCnpj',w:20,k:'cnpj'},
+    {h:'Cliente',w:40,k:'cliente'},{h:'Estado',w:7,k:'uf'},{h:'Cidade',w:18,k:'cidade'},{h:'Vendedor',w:26,v:r=>r.vendLabel},{h:'Utilização',w:18,k:'util'},{h:'CFOP',w:8,k:'cfop'},
     {h:'#Produto',w:10,k:'codProd'},{h:'Produto / Serviço',w:46,k:'produto'},{h:'Linha de atuação',w:26,k:'linha'},{h:'Quant',w:10,k:'qtd',fmt:'#,##0.##'},{h:'UN',w:6,k:'un'},
     {h:'Preço',w:13,k:'preco',fmt:MONEY},{h:'$T. Prod.',w:15,k:'totProd',fmt:MONEY},{h:'$Desconto',w:13,k:'desc',fmt:MONEY},{h:'$Frete',w:12,k:'frete',fmt:MONEY},{h:'$Total',w:15,k:'total',fmt:MONEY},
     {h:'Condição',w:22,v:r=>CAT_LABEL[catOf(r,EQC)]}];
@@ -1047,7 +1426,7 @@ function companySheet(wb,name,e,R){
   band(3,`Período das movimentações: ${perMov(R)}     ·     Período do relatório: ${perRel(e)}${e.emitido?'     ·     '+e.emitido:''}`,C.soft,{size:10,bold:true,color:{argb:C.navy}},20);
   band(4,`Filtros: ${filterList().map(([a,b])=>a+': '+b).join(' · ')}  ·  Gerado em ${new Date().toLocaleString('pt-BR')}  ·  Fonte: ${[...e.arquivos].join(', ')}${e.abas.size?' (aba '+[...e.abas].join(', ')+')':''}`,null,{size:9,italic:true,color:{argb:'FF64748B'}},18);
   // faixa de indicadores da empresa
-  const kc=[[1,5,fatLabel(R),k.f.total,MONEY],[6,6,'Locações',k.locTot,MONEY],[7,10,'Insumos (NF-e de venda)',k.insTot,MONEY],[11,13,'Fora do faturamento',foraOf(cc),MONEY],[14,14,'Total geral das notas',cc.tot,MONEY],[15,18,'Notas fiscais',k.t.notas,'#,##0'],[19,22,'Clientes atendidos',k.t.clientes,'#,##0']];
+  const kc=[[1,5,fatLabel(R),k.f.total,MONEY],[6,6,'Locações',k.locTot,MONEY],[7,10,'Insumos (NF-e c/ cobrança)',k.insTot,MONEY],[11,13,'Vendas sem cobrança (a faturar)',k.scTot,MONEY],[14,14,'Fora do faturamento',foraOf(cc),MONEY],[15,18,'Total geral das notas',cc.tot,MONEY],[19,20,'Documentos',k.docs,'#,##0'],[21,22,'Clientes atendidos',k.t.clientes,'#,##0']];
   kc.forEach(([a,b,l,v,f],i)=>{if(b>a){ws.mergeCells(5,a,5,b);ws.mergeCells(6,a,6,b)}
     const L1=ws.getCell(5,a),V1=ws.getCell(6,a);L1.value=l;V1.value=v;V1.numFmt=f;
     L1.font={name:'Arial',size:8,bold:true,color:{argb:i?'FF64748B':'FF9FC6D6'}};V1.font={name:'Arial',size:12,bold:true,color:{argb:i?C.navy:C.white}};
@@ -1057,7 +1436,7 @@ function companySheet(wb,name,e,R){
   // itens
   const HR=8,hr=ws.getRow(HR);cols.forEach((c,i)=>{const cell=hr.getCell(i+1);cell.value=c.h;cell.font={name:'Arial',size:9,bold:true,color:{argb:C.white}};cell.fill=fill(C.navy);cell.alignment={vertical:'middle',horizontal:c.fmt?'right':'left',wrapText:true};cell.border=border});hr.height=26;
   const items=[...listRows(R)].sort((a,b)=>a.data-b.data||String(a.nf).localeCompare(String(b.nf)));
-  items.forEach((r,ri)=>{const row=ws.getRow(HR+1+ri),tint=isSC(r)?'FFFDECEF':isBr(r)?'FFFFF4DE':ri%2?C.zebra:null;
+  items.forEach((r,ri)=>{const row=ws.getRow(HR+1+ri),tint=isSC(r)?'FFF1ECFF':isBr(r)?'FFFFF4DE':ri%2?C.zebra:null;
     cols.forEach((c,i)=>{const cell=row.getCell(i+1);cell.value=xlDate(c.v?c.v(r,ri):r[c.k]);cell.font={name:'Arial',size:9};cell.border=border;if(c.fmt)cell.numFmt=c.fmt;if(tint)cell.fill=fill(tint)})});
   const f1=HR+1,l1=HR+items.length,tr=ws.getRow(l1+1);
   tr.getCell(1).value='Totais';
@@ -1088,7 +1467,8 @@ function companySheet(wb,name,e,R){
     row=tot+3;
   };
   blk('Resumo por cliente','CNPJ/CPF','Cliente','Cidade / Estado',gx('cnpj',r=>r.cliente,r=>`${r.cidade} / ${r.uf}`).map(g=>({...g,key:g.k})));
-  blk('Resumo por vendedor','#Vendedor','Vendedor','',gx('vend',r=>'Vendedor '+r.vend).map(g=>({...g,key:g.k})));
+  blk('Resumo por vendedor','','Vendedor','Tipo',gx('vend',r=>r.vendLabel,r=>r.vend==='—'?'Sem vendedor':isHouse(r.vend)?'Venda direta':'Vendedor / representante'));
+  blk('Resumo por forma de recebimento','','Forma de recebimento','',gx('rec'));
   blk('Resumo por produto','#Produto','Produto / Serviço','Linha de atuação',gx(r=>r.codProd||r.produto,r=>r.produto,r=>r.linha).map(g=>({...g,key:g.k})));
   blk('Resumo por utilização','','Utilização','',gx('util'));
   blk('Resumo por estado','','Estado','',gx('uf'));
@@ -1114,23 +1494,28 @@ async function exportXlsx(){
     ['emp','Empresa (CNPJ - razão social)',x=>x.e?`${x.e.cnpj?x.e.cnpj+' - ':''}${x.e.nome}`:EL.map(e=>e.emp).join(' + '),'@','Empresa(s) emissora(s) das notas'],
     ['pm','Período das movimentações',x=>perMov(x.R),'@','Primeira e última data dos itens no filtro aplicado'],
     ['pr','Período do relatório (Fluxis)',x=>x.e?perRel(x.e):perRelAll(EL),'@','Período informado no cabeçalho do relatório importado'],
-    ['fat',fatLabel(VIEW),x=>fatur(x.R).total,MONEY,remMode(VIEW)?'Filtro isolou itens fora do faturamento (não são recebíveis)':'Locações + insumos + frete; exclui remessas sem cobrança'],
-    ['tp','Total em produtos',x=>({formula:SR('O',x)}),MONEY,'Valor bruto antes de descontos'],
-    ['ds','Descontos concedidos',x=>({formula:SR('P',x)}),MONEY,'Abatimentos aplicados nos itens'],
+    ['fat',fatLabel(VIEW),x=>fatur(x.R).total,MONEY,remMode(VIEW)?'Filtro isolou itens fora do faturamento (não são recebíveis)':'Locações + insumos + vendas sem cobrança (fatura e boleto posteriores); frete incluso'],
+    ['loc','Locações (recibos)',x=>sumBy(x.R.filter(r=>catOf(r,EQ)==='loc'),'total'),MONEY,'Incluídas no faturamento'],
+    ['ins','Insumos (NF-e de venda com cobrança)',x=>sumBy(x.R.filter(r=>catOf(r,EQ)==='ins'),'total'),MONEY,'Incluídos no faturamento'],
+    ['sc','Vendas sem cobrança (a faturar)',x=>sumBy(x.R.filter(r=>catOf(r,EQ)==='sc'),'total'),MONEY,'Incluídas no faturamento — cobradas depois em documento único (fatura + boleto)'],
+    ['tp','Total em produtos (tabela)',x=>({formula:SR('O',x)}),MONEY,'Quantidade × preço unitário, antes de descontos'],
+    ['ds','Descontos concedidos',x=>({formula:SR('P',x)}),MONEY,'Desconto destacado + desconto sobre o preço de tabela'],
     ['pd','% de desconto',null,'0.0%','Descontos ÷ total em produtos'],
-    ['fr','Frete',x=>({formula:SR('Q',x)}),MONEY,'Frete destacado nas notas'],
-    ['nf','Notas fiscais',x=>T(x).notas,'#,##0','Quantidade de NF-e distintas'],
+    ['fr','Frete',x=>({formula:SR('Q',x)}),MONEY,'Frete destacado nas notas (incluso no total)'],
+    ['ic','ICMS destacado',x=>sumBy(x.R,'icms'),MONEY,'ICMS informado nas NF-e (já embutido no valor)'],
+    ['nf','Documentos (NF-e + recibos)',x=>T(x).notas,'#,##0','Documentos distintos'],
+    ['tk','Ticket médio por documento faturável',x=>{const fr=fatRows(x.R),n=new Set(fr.map(r=>r.nfk)).size;return n?sumBy(fr,'total')/n:0},MONEY,'Faturamento líquido ÷ documentos faturáveis'],
     ['cl','Clientes atendidos',x=>T(x).clientes,'#,##0','CNPJ/CPF distintos'],
+    ['vd','Vendedores ativos',x=>vendStats(x.R).filter(v=>v.k!=='—').length,'#,##0','Vendedores / representantes com faturamento'],
+    ['pz','Prazo médio de recebimento (dias)',x=>{const p=prazo(fatRows(x.R));return p.dias==null?'—':Math.round(p.dias)},'#,##0','Vencimento − emissão, ponderado pelo valor'],
     ['pd2','Produtos distintos',x=>T(x).produtos,'#,##0','Códigos de produto distintos'],
     ['it','Itens faturados',x=>({formula:CR(x)}),'#,##0','Linhas de itens nas notas'],
-    ['qt','Quantidade total',x=>({formula:SR('M',x)}),'#,##0.##','Unidades vendidas'],
+    ['qt','Quantidade total',x=>({formula:SR('M',x)}),'#,##0.##','Unidades'],
     ['bz','Itens bonificados (valor zero)',x=>T(x).bonif,'#,##0','Itens com total igual a zero'],
-    ['sc','Remessas sem cobrança',x=>sumBy(x.R.filter(r=>isNFe0(r)&&isSC(r)),'total'),MONEY,'Fora do faturamento líquido'],
-    ['sf','Frete de remessas sem cobrança',x=>sumBy(x.R.filter(isSC),'frete'),MONEY,'Fora do faturamento líquido'],
-    ['eq','Equipamentos em NF-e (comodato)',x=>sumBy(x.R.filter(r=>isEqNF(r,EQ)),'total'),MONEY,'Fora do faturamento e do total em produtos'],
+    ['eq','Equipamentos em NF-e',x=>sumBy(x.R.filter(r=>isEqNF(r,EQ)),'total'),MONEY,'Comodato, remessa p/ locação, ativo e demonstração — fora do faturamento'],
     ['br','Brindes / Bonificações',x=>sumBy(x.R.filter(r=>isBr(r)&&!isEqNF(r,EQ)),'total'),MONEY,'Fora do faturamento líquido'],
-    ['tg','Total geral das notas',x=>concil(x.R).tot,MONEY,'Soma de todas as notas (= $Total do relatório Fluxis)'],
-    ...(VIEW.some(r=>r.inter)?[['ig','Operações intragrupo',x=>sumBy(x.R.filter(r=>r.inter),'total'),MONEY,'Notas emitidas para outra empresa do grupo (já incluídas acima)']]:[])];
+    ['tg','Total geral das notas',x=>concil(x.R).tot,MONEY,'Soma de todos os documentos (= $T Liq do relatório)'],
+    ...(VIEW.some(r=>r.inter)?[['ig','Operações intragrupo',x=>sumBy(x.R.filter(r=>r.inter),'total'),MONEY,'Documentos emitidos para outra empresa do grupo (já incluídos acima)']]:[])];
   const rowOf={};kp.forEach((k,i)=>rowOf[k[0]]=6+i);
   kp.find(k=>k[0]==='pd')[2]=x=>({formula:`IF(${x.col}${rowOf.tp}=0,0,${x.col}${rowOf.ds}/${x.col}${rowOf.tp})`});
   const h=ws.getRow(5);['Indicador',...ctx.map(c=>c.h),'Descrição'].forEach((v,i)=>{const c=h.getCell(i+2);c.value=v;c.font={name:'Arial',bold:true,color:{argb:C.white}};c.fill=fill(i&&i<=ctx.length&&ctx[i-1].crit?empArgb(ctx[i-1].crit):C.navy);c.border=border;c.alignment={horizontal:i&&i<=ctx.length?'right':'left',vertical:'middle'}});h.height=20;
@@ -1140,6 +1525,10 @@ async function exportXlsx(){
       c.font={name:'Arial',size:info?9:10,bold:isV&&!info,color:{argb:ci===NC?'FF64748B':isV?C.navy:'FF0F1C2B'}};
       if(i%2)c.fill=fill(C.zebra);c.alignment={vertical:'middle',wrapText:info};if(isV){if(!info)c.numFmt=f;c.alignment={horizontal:info?'center':'right',vertical:'middle',wrapText:info}}})});
   ctx.forEach(x=>{const c=ws.getCell(`${x.col}${rowOf.fat}`);c.fill=fill(C.soft);c.font={name:'Arial',size:12,bold:true,color:{argb:C.teal}}});
+  // insights do período
+  {let ir=6+kp.length+2;const ins=insights(VIEW);
+    if(ins.length){ws.mergeCells(ir,2,ir,NC);const t=ws.getCell(ir,2);t.value='Insights do período (filtros aplicados)';t.font={name:'Arial',size:11,bold:true,color:{argb:C.white}};t.fill=fill(C.teal);ws.getRow(ir).height=22;ir++;
+      ins.forEach((i,n)=>{ws.mergeCells(ir,2,ir,NC);const c=ws.getCell(ir,2);c.value=`${i.title}: ${stripTags(i.text)}`;c.font={name:'Arial',size:9.5,color:{argb:'FF0F1C2B'}};c.alignment={wrapText:true,vertical:'middle'};if(n%2)c.fill=fill(C.zebra);c.border=border;ws.getRow(ir).height=32;ir++})}}
   // Abas dedicadas por empresa (estrutura do modelo: uma aba por empresa)
   const used=new Set(['Resumo','Empresas','Conciliação','Itens']);
   EL.forEach(e=>{let n=String(e.emp).replace(/[\\\/\?\*\[\]:]/g,' ').slice(0,31)||'Empresa';while(used.has(n))n=(n.slice(0,28)+' '+(used.size));used.add(n);companySheet(wb,n,e,byEmp(VIEW,e.emp))});
@@ -1165,14 +1554,15 @@ async function exportXlsx(){
   const ccRows=ccG.lines.map(x=>{const o={...x};ccE.forEach((c,i)=>o['e'+i]=(c.lines.find(y=>y.k===x.k)||{total:0}).total);return o});
   dataSheet(wb,'Conciliação','Conciliação do total das notas por categoria'+(multi?' — grupo e por empresa':''),[{h:'Categoria',k:'cat',w:40},{h:'Itens',k:'n',fmt:'#,##0',w:10},...(multi?EL.map((e,i)=>({h:e.emp,k:'e'+i,fmt:MONEY,w:18})):[]),{h:multi?'Grupo':'Valor',k:'total',fmt:MONEY,w:18},{h:'% do total',k:'pct',fmt:'0.0%',w:11},{h:'Composição',k:'comp',w:24}],ccRows,{totals:['n',...(multi?EL.map((e,i)=>'e'+i):[]),'total']});
   // Itens consolidados (coluna Empresa em Y — usada pelas fórmulas do Resumo)
-  const ic=[{h:'#',v:(r,i)=>i-5,w:6},{h:'Data',k:'data',fmt:'dd/mm/yyyy hh:mm',w:16},{h:'Tipo',k:'tipo',w:7},{h:'NF',k:'nf',w:9},{h:'CPF/CNPJ',k:'cnpj',w:20},
-    {h:'Cliente',k:'cliente',w:44},{h:'UF',k:'uf',w:5},{h:'Cidade',k:'cidade',w:20},{h:'Vendedor',k:'vend',w:9},{h:'CFOP',k:'cfop',w:8},
+  const ic=[{h:'#',v:(r,i)=>i-5,w:6},{h:'Emissão',k:'data',fmt:'dd/mm/yyyy',w:11},{h:'Tipo',k:'tipo',w:7},{h:'NF',k:'nf',w:9},{h:'CPF/CNPJ',k:'cnpj',w:20},
+    {h:'Cliente',k:'cliente',w:44},{h:'UF',k:'uf',w:5},{h:'Cidade',k:'cidade',w:20},{h:'Vendedor',v:r=>r.vendLabel,w:30},{h:'CFOP',k:'cfop',w:8},
     {h:'Cód. Produto',k:'codProd',w:11},{h:'Produto',k:'produto',w:48},{h:'Qtd',k:'qtd',fmt:'#,##0.##',w:8},{h:'Preço Unit.',k:'preco',fmt:MONEY,w:13},
     {h:'Total Produto',k:'totProd',fmt:MONEY,w:15},{h:'Desconto',k:'desc',fmt:MONEY,w:13},{h:'Frete',k:'frete',fmt:MONEY,w:11},{h:'Total',k:'total',fmt:MONEY,w:15},
     {h:'NCM',k:'ncm',w:12},{h:'UN',k:'un',w:5},{h:'Utilização',k:'util',w:16},{h:'Linha de atuação',k:'linha',w:34},{h:'Fonte classificação',k:'fonte',w:20},{h:'Condição',v:r=>CAT_LABEL[catOf(r,EQ)],w:22},
-    {h:'Empresa',k:'emp',w:12},{h:'Intragrupo',v:r=>r.inter?'Sim':'',w:11}];
+    {h:'Empresa',k:'emp',w:12},{h:'Intragrupo',v:r=>r.inter?'Sim':'',w:11},
+    {h:'Vencimento',k:'venc',fmt:'dd/mm/yyyy',w:11},{h:'Status',k:'status',w:11},{h:'Forma de recebimento',k:'rec',w:22},{h:'Condição de recebimento',k:'condRec',w:16},{h:'Lote',k:'lote',w:16},{h:'Serial',k:'serial',w:30},{h:'ICMS',k:'icms',fmt:MONEY,w:12},{h:'Desc. s/ tabela',k:'descTab',fmt:MONEY,w:13},{h:'Nome fantasia',k:'fantasia',w:22},{h:'Observação',v:r=>String(r.obs||'').replace(/\s*\n\s*/g,' | '),w:70}];
   const rows=[...LR].sort((a,b)=>a.data-b.data);
-  dataSheet(wb,'Itens','Detalhamento analítico dos itens faturados — todas as empresas do filtro',ic,rows,{totals:['qtd','totProd','desc','frete','total']});
+  dataSheet(wb,'Itens','Detalhamento analítico dos itens faturados — todas as empresas do filtro',ic,rows,{totals:['qtd','totProd','desc','frete','total','icms','descTab']});
   const fr=fatRows(VIEW);
   const ag=[['Por Cliente','Faturamento por cliente (consolidado)','Cliente',group(fr,'cnpj',r=>`${r.cliente} (${r.uf})`)],
     ['Por Produto','Faturamento por produto (consolidado)','Produto',group(fr,r=>r.codProd||r.produto,r=>r.produto)],
@@ -1180,11 +1570,9 @@ async function exportXlsx(){
     ['Por Utilização','Faturamento por forma de utilização','Utilização',group(VIEW,'util')],
     ['Por Linha de Atuação','Faturamento por linha de atuação','Linha de atuação',group(fr,'linha')],
     ['Por Cidade','Faturamento por cidade','Cidade / UF',group(fr,r=>r.cidade+'/'+r.uf)],
-    ['Por Vendedor','Faturamento por vendedor','Vendedor',group(fr,r=>r.emp+'|'+r.vend,r=>(multi?r.emp+' · ':'')+'Vendedor '+r.vend)],
+    ['Por Vendedor','Faturamento por vendedor e empresa','Vendedor',group(fr,r=>r.emp+'|'+r.vend,r=>(multi?r.emp+' · ':'')+r.vendLabel)],
+    ['Por Recebimento','Faturamento por forma de recebimento','Forma de recebimento',group(fr,'rec')],
     ['Por Dia','Evolução diária do faturamento','Data',group(fr,'dia',r=>r.dia.split('-').reverse().join('/')).sort((a,b)=>a.k.localeCompare(b.k))]];
-  const remRows=VIEW.filter(isSC);
-  if(remRows.length&&!remMode(VIEW))ag.push(['Remessas por Cliente','Remessas sem cobrança por cliente (fora do faturamento)','Cliente',group(remRows,'cnpj',r=>`${r.cliente} (${r.uf})`)],
-    ['Remessas por Produto','Remessas sem cobrança por produto (fora do faturamento)','Produto',group(remRows,r=>r.codProd||r.produto,r=>r.produto)]);
   const eqRows=VIEW.filter(r=>isEqNF(r,EQ));
   if(eqRows.length&&!remMode(VIEW))ag.push(['Equipamentos por Cliente','Equipamentos em NF-e (comodato) por cliente — fora do faturamento','Cliente',group(eqRows,'cnpj',r=>`${r.cliente} (${r.uf})`)],
     ['Equipamentos por Produto','Equipamentos em NF-e (comodato) por produto — fora do faturamento','Produto',group(eqRows,r=>r.codProd||r.produto,r=>r.produto)]);
@@ -1192,6 +1580,29 @@ async function exportXlsx(){
   if(brRows.length&&!remMode(VIEW))ag.push(['Brindes por Cliente','Brindes / bonificações por cliente (fora do faturamento)','Cliente',group(brRows,'cnpj',r=>`${r.cliente} (${r.uf})`)],
     ['Brindes por Produto','Brindes / bonificações por produto (fora do faturamento)','Produto',group(brRows,r=>r.codProd||r.produto,r=>r.produto)]);
   for(const [n,ti,f,d] of ag){const s=dataSheet(wb,n,ti,aggCols(f,n==='Por Dia'?14:undefined,n.startsWith('Remessas')?'Valor (sem cobrança)':n.startsWith('Brindes')?'Valor (brindes)':n.startsWith('Equipamentos')?'Valor (NF-e)':undefined),d,{totals:['notas','itens','qtd','totProd','desc','frete','total']});fixPct(s,d.length)}
+  // Vendedores (desempenho)
+  const vsx=vendStats(VIEW);
+  dataSheet(wb,'Vendedores','Desempenho por vendedor — base: faturamento líquido (locações + insumos + vendas sem cobrança)',[
+    {h:'#',v:(r,i)=>i-5,w:5},{h:'Vendedor',k:'label',w:44},{h:'Tipo',v:r=>vendTipo(r),w:22},{h:'Empresa(s)',v:r=>[...r.emps].join(', '),w:18},
+    {h:'Faturamento',k:'total',fmt:MONEY,w:17},{h:'% Part.',k:'share',fmt:'0.0%',w:9},{h:'Documentos',k:'notas',fmt:'#,##0',w:11},{h:'Clientes',k:'clientes',fmt:'#,##0',w:10},{h:'Ticket médio',k:'ticket',fmt:MONEY,w:15},
+    {h:'Locações',k:'loc',fmt:MONEY,w:15},{h:'Insumos',k:'ins',fmt:MONEY,w:15},{h:'Vendas s/ cobrança',k:'sc',fmt:MONEY,w:17},{h:'Itens',k:'itens',fmt:'#,##0',w:8},{h:'Quantidade',k:'qtd',fmt:'#,##0.##',w:11},
+    {h:'Total produtos (tabela)',k:'totProd',fmt:MONEY,w:18},{h:'Descontos',k:'desc',fmt:MONEY,w:15},{h:'% desconto',k:'pDesc',fmt:'0.0%',w:10}],vsx,{totals:['total','share','notas','itens','qtd','loc','ins','sc','totProd','desc']});
+  // Documentos (NF-e e recibos) com observação
+  const dcx=docsOf(VIEW).sort((a,b)=>a.data-b.data||String(a.nf).localeCompare(String(b.nf),'pt',{numeric:true}));
+  dataSheet(wb,'Documentos','Documentos (NF-e e recibos) — um registro por documento, itens consolidados e observação',[
+    {h:'#',v:(r,i)=>i-5,w:5},{h:'Emissão',k:'data',fmt:'dd/mm/yyyy',w:11},{h:'Vencimento',k:'venc',fmt:'dd/mm/yyyy',w:11},{h:'Prazo (dias)',k:'prazo',fmt:'#,##0',w:9},{h:'Empresa',k:'emp',w:11},{h:'Tipo',k:'tipo',w:8},{h:'Número',k:'nf',w:9},{h:'Status',k:'status',w:11},
+    {h:'CNPJ/CPF',k:'cnpj',w:20},{h:'Cliente',k:'cliente',w:42},{h:'Nome fantasia',k:'fantasia',w:22},{h:'Cidade',k:'cidade',w:18},{h:'UF',k:'uf',w:5},{h:'Vendedor',k:'vend',w:30},{h:'Utilização',k:'util',w:20},{h:'CFOP',k:'cfop',w:8},
+    {h:'Forma de recebimento',k:'rec',w:22},{h:'Condição',k:'condRec',w:14},{h:'Itens',k:'itens',fmt:'#,##0',w:7},{h:'Quantidade',k:'qtd',fmt:'#,##0.##',w:10},{h:'Total produtos',k:'totProd',fmt:MONEY,w:15},{h:'Descontos',k:'desc',fmt:MONEY,w:13},{h:'Frete',k:'frete',fmt:MONEY,w:11},{h:'ICMS',k:'icms',fmt:MONEY,w:12},{h:'Total',k:'total',fmt:MONEY,w:15},
+    {h:'Composição',k:'cat',w:36},{h:'Faturável',v:r=>r.fat?'Sim':'Não',w:9},{h:'Intragrupo',v:r=>r.inter?'Sim':'',w:10},{h:'Observação',v:r=>String(r.obs||'').replace(/\s*\n\s*/g,' | '),w:80}],dcx,{totals:['itens','qtd','totProd','desc','frete','icms','total']});
+  // Vendas sem cobrança a faturar (documento único por cliente)
+  const scx=VIEW.filter(r=>catOf(r,EQ)==='sc');
+  if(scx.length){const m=new Map();scx.forEach(r=>{const k=r.emp+'|'+r.cnpj;let g=m.get(k);if(!g)m.set(k,g={emp:r.emp,cnpj:r.cnpj,cliente:r.cliente,cidade:r.cidade,uf:r.uf,vends:new Set(),nfs:new Set(),ini:r.data,fim:r.data,itens:0,qtd:0,frete:0,total:0});
+      g.vends.add(r.vendLabel);g.nfs.add(r.nf);if(r.data<g.ini)g.ini=r.data;if(r.data>g.fim)g.fim=r.data;g.itens++;g.qtd+=r.qtd;g.frete+=r.frete;g.total+=r.total});
+    const L=[...m.values()].map(g=>({...g,nNf:g.nfs.size})).sort((a,b)=>b.total-a.total);
+    dataSheet(wb,'A Faturar (sem cobrança)','Vendas sem cobrança a consolidar em documento único (fatura + boleto) — por empresa emissora e cliente',[{h:'#',v:(r,i)=>i-5,w:5},{h:'Empresa emissora',k:'emp',w:13},{h:'CNPJ/CPF',k:'cnpj',w:20},{h:'Cliente',k:'cliente',w:44},{h:'Cidade',k:'cidade',w:18},{h:'UF',k:'uf',w:5},{h:'Vendedor(es)',v:r=>[...r.vends].join(', '),w:34},
+      {h:'Qtd. NF-e',k:'nNf',fmt:'#,##0',w:9},{h:'NF-e vinculadas',v:r=>[...r.nfs].sort((a,b)=>String(a).localeCompare(String(b),'pt',{numeric:true})).join(', '),w:50},{h:'Primeira emissão',k:'ini',fmt:'dd/mm/yyyy',w:12},{h:'Última emissão',k:'fim',fmt:'dd/mm/yyyy',w:12},{h:'Itens',k:'itens',fmt:'#,##0',w:7},{h:'Quantidade',k:'qtd',fmt:'#,##0.##',w:10},{h:'Frete',k:'frete',fmt:MONEY,w:12},{h:'Valor a faturar',k:'total',fmt:MONEY,w:17}],L,{totals:['nNf','itens','qtd','frete','total']})}
+  // Vencimentos dos recebíveis
+  dataSheet(wb,'Vencimentos','Recebíveis por data de vencimento (documentos faturáveis) — vendas sem cobrança em linha própria',[{h:'#',v:(r,i)=>i-5,w:5},{h:'Vencimento',k:'label',w:30},{h:'Documentos',k:'docs',fmt:'#,##0',w:11},{h:'Clientes',k:'clientes',fmt:'#,##0',w:10},{h:'Formas de recebimento',k:'formas',w:40},{h:'Valor',k:'total',fmt:MONEY,w:17}],vencRows(VIEW),{totals:['docs','total']});
   routeSheet(wb,VIEW);
   const buf=await wb.xlsx.writeBuffer();
   const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
@@ -1275,38 +1686,50 @@ function openPdf(){
   const EL=empsIn(VIEW),multi=EL.length>1,now=new Date().toLocaleString('pt-BR'),EQ=eqCat(),sum=sumBy;
   const bar=(v,m,c)=>`<div class="bar"><i style="width:${(v/(m||1)*100).toFixed(1)}%${c?';background:'+c:''}"></i></div>`;
   const tbl=(head,rows,foot)=>`<table><thead><tr>${head.map(h=>`<th class="${h[1]?'r':''}">${h[0]}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody>${foot?`<tfoot>${foot}</tfoot>`:''}</table>`;
-  const detRow=r=>{const sc=isSC(r);return `<tr${sc?' class="sc-row"':isBr(r)?' class="br-row"':''}><td>${fmtD(r.data)}</td><td>${esc(r.nf)}</td><td>${esc(r.cliente)}</td><td>${esc(r.uf)}</td><td>${esc(r.util)}</td><td>${esc(r.produto)}</td><td class="r">${NUM.format(r.qtd)}</td><td class="r">${BRL.format(r.desc)}</td><td class="r${sc&&r.frete>0?' sc-t':''}">${BRL.format(r.frete)}</td><td class="r${sc?' sc-t':''}">${BRL.format(r.total)}</td></tr>`};
+  const detRow=r=>{const sc=isSC(r);return `<tr${sc?' class="sc-row"':isBr(r)?' class="br-row"':''}><td>${fmtD(r.data)}</td><td>${esc(r.tipo==='Recibo'?'Rec. ':'')}${esc(r.nf)}</td><td>${esc(r.cliente)}</td><td>${esc(r.uf)}</td><td>${esc(r.vendLabel)}</td><td>${esc(r.util)}</td><td>${esc(r.produto)}</td><td class="r">${NUM.format(r.qtd)}</td><td class="r">${BRL.format(r.desc)}</td><td class="r">${BRL.format(r.frete)}</td><td class="r">${BRL.format(r.total)}</td></tr>`};
   const etag=e=>`<span class="et" style="background:${empColor(e)}">${esc(e)}</span>`;
   // Seção completa para um conjunto de linhas (grupo consolidado ou uma empresa)
   function section(R,o={}){
     const t=totals(cardRows(R)),pct=v=>(v/(t.total||1)*100).toFixed(1)+'%',fr=fatRows(R),ac=o.color||'#0fa3a3';
-    const cli=group(fr,'cnpj',r=>r.cliente),util=group(R,'util'),linhas=group(fr,'linha'),uf=group(fr,'uf'),locR=R.filter(isLoc),loc=group(locR,r=>r.codProd||r.produto,r=>r.produto).slice(0,10),prod=group(fr,r=>r.codProd||r.produto,r=>r.produto).slice(0,10);
+    const cli=group(fr,'cnpj',r=>r.cliente),util=group(R,'util'),linhas=group(fr,'linha'),uf=group(fr,'uf'),locR=R.filter(isLoc),locCli=locR.length&&locR.every(r=>!r.codProd),loc=(locCli?group(locR,'cnpj',r=>r.cliente):group(locR,r=>r.codProd||r.produto,r=>r.produto)).slice(0,10),vs=vendStats(R),ins=insights(R),recG=group(fr,'rec'),vw=vencWeeks(R),prod=group(fr.filter(r=>r.codProd||!isLoc(r)),r=>r.codProd||r.produto,r=>r.produto).slice(0,10);
     const cliInfo=new Map(R.map(r=>[r.cnpj,r])),cliEmp=new Map();R.forEach(r=>{let s=cliEmp.get(r.cnpj);if(!s)cliEmp.set(r.cnpj,s=new Set());s.add(r.emp)});
     const eqAll=R.filter(r=>isEqNF(r,EQ)),brAll=R.filter(r=>isBr(r)&&!isEqNF(r,EQ)),scAll=R.filter(isSC),ccP=concil(R),rm=remMode(R);
     const remOn=scAll.length>0&&!rm,remTot=sum(scAll,'total'),remPct=v=>(v/(remTot||1)*100).toFixed(1)+'%';
     const remCli=remOn?group(scAll,'cnpj',r=>r.cliente):[],remProd=remOn?group(scAll,r=>r.codProd||r.produto,r=>r.produto).slice(0,10):[];
     const ME=o.multi?empsIn(R):[],mc=ME.length>1,ccE=ME.map(e=>concil(byEmp(R,e.emp))),ccv=(c,k)=>(c.lines.find(x=>x.k===k)||{total:0}).total;
     const f=fatur(R),pctN=v=>(v/(ccP.tot||1)*100).toFixed(1)+'%';
-    const kp=[[fatLabel(R),BRL.format(f.total),rm?'Filtro isolou remessas (não são recebíveis)':'Locações + insumos + frete',1],['Total em produtos',BRL.format(t.totProd),'Valor bruto'],['Descontos',BRL.format(t.desc),`${(t.pDesc*100).toFixed(1)}% do bruto`],['Clientes',NUM.format(t.clientes),`${NUM.format(t.produtos)} produtos`],['Itens / Qtd',`${NUM.format(t.itens)} / ${NUM.format(t.qtd)}`,`${t.bonif} bonificados`],['Frete',BRL.format(f.frete),`Sem cobrança: ${BRL.format(sum(scAll,'frete'))} · ST/IPI ${BRL.format(t.imp)}`],['Total geral das notas',BRL.format(ccP.tot),`${NUM.format(R.length)} itens · fora do faturamento ${BRL.format(foraOf(ccP))}`],['Notas fiscais',NUM.format(t.notas),R.some(r=>r.inter)?`Intragrupo: ${BRL.format(sum(R.filter(r=>r.inter),'total'))}`:'NF-e e recibos distintos']];
+    const kq=kpiSet(R);
+    const kp=[[fatLabel(R),BRL.format(f.total),rm?'Filtro isolou itens fora do faturamento':'Locações + insumos + vendas sem cobrança · frete incluso',1],
+      ['Locações',BRL.format(kq.locTot),`${kq.locNf} recibo(s)`],['Insumos (NF-e c/ cobrança)',BRL.format(kq.insTot),`${new Set(kq.insR.map(r=>r.nfk)).size} NF-e de venda`],
+      ['Vendas sem cobrança (a faturar)',BRL.format(kq.scTot),kq.scR.length?`${new Set(kq.scR.map(r=>r.nfk)).size} NF-e · ${kq.scCli} cliente(s) · fatura + boleto únicos`:'Sem vendas sem cobrança'],
+      ['Total em produtos / Descontos',BRL.format(t.totProd),`Descontos ${BRL.format(t.desc)} (${(t.pDesc*100).toFixed(1)}% do bruto)`],
+      ['Documentos / Ticket médio',`${NUM.format(kq.docs)} / ${BRL.format(kq.tick)}`,`${NUM.format(t.itens)} itens · ${NUM.format(t.qtd)} un · ${t.bonif} bonificados`],
+      ['Clientes / Vendedores',`${NUM.format(t.clientes)} / ${NUM.format(kq.vAct.length)}`,kq.pz.dias!=null?`Prazo médio de recebimento: ${Math.round(kq.pz.dias)} dias`:'Sem vencimentos no filtro'],
+      ['Total geral das notas',BRL.format(ccP.tot),`Fora do faturamento ${BRL.format(foraOf(ccP))}${R.some(r=>r.inter)?` · intragrupo ${BRL.format(sum(R.filter(r=>r.inter),'total'))}`:''}`]];
     const cliRow=(g,i,val)=>{const c=cliInfo.get(g.k)||{};return `<tr><td>${i+1}</td><td><b>${esc(g.label)}</b><div class="sub">${esc(g.k)}</div></td><td>${esc(c.cidade||'')}/${esc(c.uf||'')}</td>${mc?`<td>${[...(cliEmp.get(g.k)||[])].map(etag).join(' ')}</td>`:''}<td class="r">${g.notas}</td><td class="r">${NUM.format(g.qtd)}</td>${val(g)}</tr>`};
     const ccHead=[['Categoria'],['Itens',1],...ME.length>1?ME.map(e=>[esc(e.emp),1]):[],[mc?'Grupo':'Valor',1],['% do total',1],['Composição']];
     const det=o.detail?[...listRows(R)].sort((a,b)=>a.data-b.data||String(a.nf).localeCompare(String(b.nf))):[];
     return `<div class="kpis" style="--ac:${ac}">${kp.map(([l,v,s,h])=>`<div class="k ${h?'h':''}"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join('')}</div>
+${ins.length?`<h2>Insights do período</h2><div class="ins">${ins.map(i=>`<div class="in ${i.tone}"><b>${esc(i.title)}</b>${i.text}</div>`).join('')}</div>`:''}
 <h2>Resumo por utilização <span class="sub">(% sobre o total geral das notas: ${BRL.format(ccP.tot)})</span></h2>
 <div class="ucards">${util.map(u=>`<div class="uc"><div class="t">${esc(u.k)}</div><div class="v">${BRL.format(u.total)}</div><div class="s">${pctN(u.total)} do total das notas · ${u.notas} NF · ${NUM.format(u.qtd)} un</div>${bar(u.total,util[0].total)}</div>`).join('')}</div>
 <h2>Resumo por linha de atuação</h2>
 <div class="ucards">${linhas.map(u=>`<div class="uc"><div class="t">${esc(u.k)}</div><div class="v">${BRL.format(u.total)}</div><div class="s">${pct(u.total)} do total · ${u.notas} NF · ${NUM.format(u.qtd)} un</div>${bar(u.total,linhas[0].total)}</div>`).join('')||'<p class="sub">Sem faturamento no filtro atual.</p>'}</div>
-<div class="cols"><div><h2>Locações por equipamento</h2>${loc.length?tbl([['Equipamento'],['Qtd',1],['Valor',1]],loc.map(g=>`<tr><td>${esc(g.label)}${bar(g.total,loc[0].total)}</td><td class="r">${NUM.format(g.qtd)}</td><td class="r">${BRL.format(g.total)}</td></tr>`)):'<p class="sub">Sem locações no filtro atual.</p>'}</div>
+<div class="cols"><div><h2>${locCli?'Locações por cliente':'Locações por equipamento'}</h2>${loc.length?tbl([[locCli?'Cliente':'Equipamento'],[locCli?'Recibos':'Qtd',1],['Valor',1]],loc.map(g=>`<tr><td>${esc(g.label)}${bar(g.total,loc[0].total)}</td><td class="r">${NUM.format(locCli?g.notas:g.qtd)}</td><td class="r">${BRL.format(g.total)}</td></tr>`)):'<p class="sub">Sem locações no filtro atual.</p>'}</div>
 <div><h2>Faturamento por estado</h2>${uf.length?tbl([['UF'],['NF',1],['Valor',1],['%',1]],uf.map(g=>`<tr><td>${esc(g.k)}${bar(g.total,uf[0].total)}</td><td class="r">${g.notas}</td><td class="r">${BRL.format(g.total)}</td><td class="r">${pct(g.total)}</td></tr>`)):'<p class="sub">Sem faturamento no filtro atual.</p>'}</div></div>
 <h2>Resumo por cliente${mc?' <span class="sub">(consolidado — empresas que atenderam cada cliente)</span>':''}</h2>
 ${cli.length?tbl([['#'],['Cliente'],['Cidade/UF'],...(mc?[['Empresa(s)']]:[]),['NF',1],['Qtd',1],['Desconto',1],['Faturamento',1],['%',1]],cli.map((g,i)=>cliRow(g,i,g=>`<td class="r">${BRL.format(g.desc)}</td><td class="r"><b>${BRL.format(g.total)}</b></td><td class="r">${pct(g.total)}</td>`))):'<p class="sub">Sem faturamento no filtro atual.</p>'}
+<h2>Desempenho por vendedor <span class="sub">(base: faturamento líquido)</span></h2>
+${vs.length?tbl([['#'],['Vendedor'],['Tipo'],...(mc?[['Empresa(s)']]:[]),['Docs',1],['Clientes',1],['Ticket médio',1],['Locações',1],['Insumos',1],['Vendas s/ cobrança',1],['% desc.',1],['Faturamento',1],['%',1]],vs.map((v,i)=>`<tr><td>${i+1}</td><td><b>${esc(v.label)}</b></td><td>${vendTipo(v)}</td>${mc?`<td>${[...v.emps].map(etag).join(' ')}</td>`:''}<td class="r">${NUM.format(v.notas)}</td><td class="r">${NUM.format(v.clientes)}</td><td class="r">${BRL.format(v.ticket)}</td><td class="r">${BRL.format(v.loc)}</td><td class="r">${BRL.format(v.ins)}</td><td class="r">${BRL.format(v.sc)}</td><td class="r">${(v.pDesc*100).toFixed(1)}%</td><td class="r"><b>${BRL.format(v.total)}</b>${bar(v.total,Math.max(...vs.map(x=>x.total)))}</td><td class="r">${(v.share*100).toFixed(1)}%</td></tr>`)):'<p class="sub">Sem faturamento no filtro atual.</p>'}
+<div class="cols"><div><h2>Faturamento por forma de recebimento</h2>${recG.length?tbl([['Forma'],['Docs',1],['Valor',1],['%',1]],recG.map(g=>`<tr><td>${esc(g.k)}${bar(g.total,recG[0].total)}</td><td class="r">${g.notas}</td><td class="r">${BRL.format(g.total)}</td><td class="r">${pct(g.total)}</td></tr>`)):'<p class="sub">Sem dados.</p>'}</div>
+<div><h2>Vencimentos dos recebíveis <span class="sub">(por semana)</span></h2>${vw.length?tbl([['Semana de vencimento'],['Docs',1],['Valor',1]],vw.map(g=>`<tr><td>${esc(g.label)}${bar(g.total,Math.max(...vw.map(x=>x.total)))}</td><td class="r">${g.docs}</td><td class="r">${BRL.format(g.total)}</td></tr>`)):'<p class="sub">Sem dados.</p>'}</div></div>
 <h2>Top 10 produtos</h2>
 ${prod.length?tbl([['Produto'],['Qtd',1],['Faturamento',1],['%',1]],prod.map(g=>`<tr><td>${esc(g.label)}</td><td class="r">${NUM.format(g.qtd)}</td><td class="r">${BRL.format(g.total)}</td><td class="r">${pct(g.total)}</td></tr>`)):'<p class="sub">Sem faturamento no filtro atual.</p>'}
 <h2>Conciliação do total das notas${mc?' <span class="sub">(grupo e por empresa)</span>':''}</h2>
 ${tbl(ccHead,[...ccP.lines.map(x=>`<tr><td>${esc(x.cat)}</td><td class="r">${NUM.format(x.n)}</td>${mc?ccE.map(c=>`<td class="r">${BRL.format(ccv(c,x.k))}</td>`).join(''):''}<td class="r">${BRL.format(x.total)}</td><td class="r">${(x.pct*100).toFixed(1)}%</td><td>${x.comp}</td></tr>`),`<tr class="sc-t"><td><b>Total geral das notas</b></td><td class="r">${NUM.format(ccP.lines.reduce((a,x)=>a+x.n,0))}</td>${mc?ccE.map(c=>`<td class="r"><b>${BRL.format(c.tot)}</b></td>`).join(''):''}<td class="r"><b>${BRL.format(ccP.tot)}</b></td><td class="r">100%</td><td></td></tr>`])}
-${remOn?`<h2>Remessas sem cobrança por cliente <span class="sub">(fora do faturamento líquido)</span></h2>
+${remOn?`<h2>Vendas sem cobrança por cliente — a faturar <span class="sub">(incluídas no faturamento · cobrança posterior em fatura e boleto únicos)</span></h2>
 ${tbl([['#'],['Cliente'],['Cidade/UF'],...(mc?[['Empresa(s)']]:[]),['NF',1],['Qtd',1],['Frete',1],['Valor',1],['%',1]],remCli.map((g,i)=>cliRow(g,i,g=>`<td class="r">${BRL.format(g.frete)}</td><td class="r"><b>${BRL.format(g.total)}</b></td><td class="r">${remPct(g.total)}</td>`)))}
-<h2>Top 10 remessas sem cobrança por produto</h2>
+<h2>Top 10 produtos em vendas sem cobrança</h2>
 ${tbl([['Produto'],['Qtd',1],['Valor',1],['%',1]],remProd.map(g=>`<tr><td>${esc(g.label)}</td><td class="r">${NUM.format(g.qtd)}</td><td class="r">${BRL.format(g.total)}</td><td class="r">${remPct(g.total)}</td></tr>`))}`:''}
 ${eqAll.length&&!rm?`<h2>Equipamentos em NF-e (comodato) por cliente <span class="sub">(fora do faturamento líquido)</span></h2>
 ${tbl([['#'],['Cliente'],['Cidade/UF'],...(mc?[['Empresa(s)']]:[]),['NF',1],['Qtd',1],['Valor',1]],group(eqAll,'cnpj',r=>r.cliente).map((g,i)=>cliRow(g,i,g=>`<td class="r"><b>${BRL.format(g.total)}</b></td>`)))}
@@ -1316,10 +1739,10 @@ ${brAll.length&&!rm?`<h2>Brindes / bonificações por cliente <span class="sub">
 ${tbl([['#'],['Cliente'],['Cidade/UF'],...(mc?[['Empresa(s)']]:[]),['NF',1],['Qtd',1],['Valor',1]],group(brAll,'cnpj',r=>r.cliente).map((g,i)=>cliRow(g,i,g=>`<td class="r"><b>${BRL.format(g.total)}</b></td>`)))}
 <h2>Top 10 brindes / bonificações por produto</h2>
 ${tbl([['Produto'],['Qtd',1],['Valor',1]],group(brAll,r=>r.codProd||r.produto,r=>r.produto).slice(0,10).map(g=>`<tr><td>${esc(g.label)}</td><td class="r">${NUM.format(g.qtd)}</td><td class="r">${BRL.format(g.total)}</td></tr>`))}`:''}
-${o.detail?`<h2>Detalhamento dos itens <span class="sub">(${NUM.format(det.length)} registros${scOnly(R)?' · somente remessas com frete a cobrar':rm?' · itens fora do faturamento':scAll.length||brAll.length?' · remessas e brindes em destaque':''})</span></h2>
-<table class="det"><thead><tr>${[['Data'],['NF'],['Cliente'],['UF'],['Utilização'],['Produto'],['Qtd',1],['Desconto',1],['Frete',1],['Total',1]].map(h=>`<th class="${h[1]?'r':''}">${h[0]}</th>`).join('')}</tr></thead>
+${o.detail?`<h2>Detalhamento dos itens <span class="sub">(${NUM.format(det.length)} registros${rm?' · itens fora do faturamento':scAll.length||brAll.length?' · vendas sem cobrança e brindes em destaque':''})</span></h2>
+<table class="det"><thead><tr>${[['Data'],['Doc.'],['Cliente'],['UF'],['Vendedor'],['Utilização'],['Produto'],['Qtd',1],['Desconto',1],['Frete',1],['Total',1]].map(h=>`<th class="${h[1]?'r':''}">${h[0]}</th>`).join('')}</tr></thead>
 <tbody>${det.map(detRow).join('')}</tbody>
-<tfoot>${rm?`<tr><td colspan="6">Total — ${scOnly(R)?'remessas com frete a cobrar':'itens'} (fora do faturamento)</td><td class="r">${NUM.format(sum(det,'qtd'))}</td><td class="r">${BRL.format(sum(det,'desc'))}</td><td class="r">${BRL.format(sum(det,'frete'))}</td><td class="r">${BRL.format(sum(det,'total'))}</td></tr>`:`<tr><td colspan="6">Total faturável (locações + insumos)</td><td class="r">${NUM.format(sum(fr,'qtd'))}</td><td class="r">${BRL.format(sum(fr,'desc'))}</td><td class="r">${BRL.format(sum(fr,'frete'))}</td><td class="r">${BRL.format(sum(fr,'total'))}</td></tr>${scAll.length?`<tr><td colspan="6" class="sc-t">Remessas sem cobrança (fora do faturamento)</td><td class="r">${NUM.format(sum(scAll,'qtd'))}</td><td class="r">${BRL.format(sum(scAll,'desc'))}</td><td class="r sc-t">${BRL.format(sum(scAll,'frete'))}</td><td class="r sc-t">${BRL.format(sum(scAll,'total'))}</td></tr>`:''}${brAll.length?`<tr><td colspan="6">Brindes / bonificações (fora do faturamento)</td><td class="r">${NUM.format(sum(brAll,'qtd'))}</td><td class="r">${BRL.format(sum(brAll,'desc'))}</td><td class="r">${BRL.format(sum(brAll,'frete'))}</td><td class="r">${BRL.format(sum(brAll,'total'))}</td></tr>`:''}`}<tr><td colspan="6"><b>Total geral das notas</b></td><td class="r">${NUM.format(sum(R,'qtd'))}</td><td class="r">${BRL.format(sum(R,'desc'))}</td><td class="r">${BRL.format(sum(R,'frete'))}</td><td class="r"><b>${BRL.format(ccP.tot)}</b></td></tr></tfoot></table>`:''}`;
+<tfoot>${rm?`<tr><td colspan="7">Total — ${scOnly(R)?'remessas com frete a cobrar':'itens'} (fora do faturamento)</td><td class="r">${NUM.format(sum(det,'qtd'))}</td><td class="r">${BRL.format(sum(det,'desc'))}</td><td class="r">${BRL.format(sum(det,'frete'))}</td><td class="r">${BRL.format(sum(det,'total'))}</td></tr>`:`<tr><td colspan="7">Total faturável (locações + insumos + vendas sem cobrança)</td><td class="r">${NUM.format(sum(fr,'qtd'))}</td><td class="r">${BRL.format(sum(fr,'desc'))}</td><td class="r">${BRL.format(sum(fr,'frete'))}</td><td class="r">${BRL.format(sum(fr,'total'))}</td></tr>${scAll.length?`<tr><td colspan="7">  dos quais: vendas sem cobrança (a faturar)</td><td class="r">${NUM.format(sum(scAll,'qtd'))}</td><td class="r">${BRL.format(sum(scAll,'desc'))}</td><td class="r">${BRL.format(sum(scAll,'frete'))}</td><td class="r">${BRL.format(sum(scAll,'total'))}</td></tr>`:''}${brAll.length?`<tr><td colspan="7">Brindes / bonificações (fora do faturamento)</td><td class="r">${NUM.format(sum(brAll,'qtd'))}</td><td class="r">${BRL.format(sum(brAll,'desc'))}</td><td class="r">${BRL.format(sum(brAll,'frete'))}</td><td class="r">${BRL.format(sum(brAll,'total'))}</td></tr>`:''}`}<tr><td colspan="7"><b>Total geral das notas</b></td><td class="r">${NUM.format(sum(R,'qtd'))}</td><td class="r">${BRL.format(sum(R,'desc'))}</td><td class="r">${BRL.format(sum(R,'frete'))}</td><td class="r"><b>${BRL.format(ccP.tot)}</b></td></tr></tfoot></table>`:''}`;
   }
   const filt=filterList().map(([a,b])=>`${a}: <b>${esc(b)}</b>`);
   const pageHd=(title,sub)=>`<div class="hd"><div class="logo"><i>L</i><div><h1>${title}</h1><p>${sub}</p></div></div><div class="r"><p><b>Grupo Labmedic</b></p><p>${EL.map(e=>esc(e.emp)).join(' · ')}</p><p>Gerado em ${now}</p></div></div>`;
@@ -1367,9 +1790,10 @@ h2.big{font-size:14px;margin-top:22px;padding-top:12px;border-top:1px solid #dbe
 .ucards{display:grid;grid-template-columns:repeat(auto-fill,minmax(42mm,1fr));gap:8px}.uc{border:1px solid #dbe4ec;border-radius:6px;padding:9px 10px;break-inside:avoid}.uc .t{font-weight:800;color:#0b2540}.uc .v{font-size:13px;font-weight:800;color:#0fa3a3;margin:3px 0}.uc .s{font-size:8.5px;color:#64748b}
 table{width:100%;border-collapse:collapse;font-size:9px}th{background:#0b2540;color:#fff;text-align:left;padding:5px 6px;font-weight:600}td{padding:4px 6px;border-bottom:1px solid #e6edf2;vertical-align:top}tr:nth-child(even) td{background:#f6f9fb}tr{break-inside:avoid}.r{text-align:right;white-space:nowrap}
 .bar{height:3px;background:#e3f6f4;border-radius:2px;margin-top:3px}.bar i{display:block;height:100%;background:#0fa3a3;border-radius:2px}.sub{color:#64748b;font-size:8px}
+.ins{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:6px}.in{border:1px solid #dbe4ec;border-left:3px solid #0fa3a3;border-radius:6px;padding:7px 9px;font-size:9px;line-height:1.45;break-inside:avoid}.in>b:first-child{display:block;font-size:7.5px;text-transform:uppercase;color:#64748b;margin-bottom:2px}.in.warn{border-left-color:#f59e0b}.in.good{border-left-color:#22a06b}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}.et{display:inline-block;color:#fff;font-size:7.5px;font-weight:700;padding:1px 6px;border-radius:8px;margin:1px 0}
 .ft{margin-top:18px;padding-top:8px;border-top:1px solid #dbe4ec;color:#94a3b8;font-size:8px;display:flex;justify-content:space-between}
-tr.sc-row td{background:#fdecef}tr.br-row td{background:#fff4de}.sc-t{color:#e2566b;font-weight:700}tfoot td{background:#eef3f7!important;font-weight:700;border-top:2px solid #0b2540}.det{font-size:8px}.det td{padding:3px 5px}thead{display:table-header-group}
+tr.sc-row td{background:#f1ecff}tr.br-row td{background:#fff4de}.sc-t{color:#e2566b;font-weight:700}tfoot td{background:#eef3f7!important;font-weight:700;border-top:2px solid #0b2540}.det{font-size:8px}.det td{padding:3px 5px}thead{display:table-header-group}
 @media print{body{background:#fff}.bar-top{display:none}.page{margin:0;width:auto;min-height:0;box-shadow:none;padding:0}.page+.page{break-before:page}}</style></head><body>
 <div class="bar-top"><span>Pré-visualização do relatório — use “Salvar como PDF” na janela de impressão${multi?` · ${EL.length+1} seções: consolidado + ${EL.map(e=>esc(e.emp)).join(' + ')}`:''}</span><div><button onclick="print()">Salvar / Imprimir PDF</button><button onclick="window.close()">Fechar</button></div></div>
 ${body}</body></html>`;
